@@ -72,6 +72,27 @@
             <el-menu-item index="/user/level">会员等级</el-menu-item>
             <el-menu-item index="/user/growth">成长值积分</el-menu-item>
           </el-sub-menu>
+
+          <el-sub-menu index="promotion">
+            <template #title>
+              <el-icon><Ticket /></el-icon>
+              <span>营销</span>
+            </template>
+            <el-menu-item index="/promotion/seckill">秒杀活动</el-menu-item>
+            <el-menu-item index="/promotion/group-buy">团购活动</el-menu-item>
+            <el-menu-item index="/promotion/coupon">优惠券</el-menu-item>
+          </el-sub-menu>
+
+          <el-sub-menu index="ops">
+            <template #title>
+              <el-icon><Bell /></el-icon>
+              <span>运营</span>
+            </template>
+            <el-menu-item index="/ops/system-message">系统消息</el-menu-item>
+            <el-menu-item index="/ops/sms">短信</el-menu-item>
+            <el-menu-item index="/ops/station-message">站内信</el-menu-item>
+            <el-menu-item index="/ops/advertisement">广告位</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>
@@ -124,6 +145,7 @@ import {
   List,
   Box,
   User,
+  Ticket,
   Fold,
   Expand,
   Refresh,

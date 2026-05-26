@@ -1,0 +1,1 @@
+import{P as t}from"./ProductDataPanel-CAGCIb30.js";import{H as e,g as a}from"./index-CnOCWbJR.js";import"./product-CD3nDZvK.js";const _={__name:"index",setup(r){return(o,p)=>(e(),a(t,{"page-type":"list"}))}};export{_ as default};
