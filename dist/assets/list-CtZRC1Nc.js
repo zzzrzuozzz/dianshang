@@ -1,0 +1,1 @@
+import{O as t}from"./OrderListPanel-Cu9oS88D.js";import{H as e,g as r}from"./index-CeTCCYYg.js";import"./order-C8bnv4lr.js";const i={__name:"list",setup(a){return(o,s)=>(e(),r(t,{"page-type":"list"}))}};export{i as default};

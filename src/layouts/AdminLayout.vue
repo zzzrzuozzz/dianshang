@@ -61,6 +61,17 @@
             <el-menu-item index="/inventory/list">库存看板</el-menu-item>
             <el-menu-item index="/inventory/flow">出入库流水</el-menu-item>
           </el-sub-menu>
+
+          <el-sub-menu index="user">
+            <template #title>
+              <el-icon><User /></el-icon>
+              <span>用户</span>
+            </template>
+            <el-menu-item index="/user/list">用户列表</el-menu-item>
+            <el-menu-item index="/user/tag">标签管理</el-menu-item>
+            <el-menu-item index="/user/level">会员等级</el-menu-item>
+            <el-menu-item index="/user/growth">成长值积分</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>
@@ -112,6 +123,7 @@ import {
   Goods,
   List,
   Box,
+  User,
   Fold,
   Expand,
   Refresh,

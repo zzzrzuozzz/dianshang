@@ -1,0 +1,1 @@
+import{P as t}from"./ProductDataPanel-C5CARBuz.js";import{H as a,g as e}from"./index-CeTCCYYg.js";import"./product-CD3nDZvK.js";const m={__name:"audit",setup(r){return(o,p)=>(a(),e(t,{"page-type":"audit"}))}};export{m as default};
