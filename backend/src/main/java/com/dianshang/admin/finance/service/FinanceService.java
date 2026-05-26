@@ -15,6 +15,7 @@ import com.dianshang.admin.member.entity.MemberEntity;
 import com.dianshang.admin.member.repository.MemberRepository;
 import com.dianshang.admin.order.entity.OrderEntity;
 import com.dianshang.admin.order.repository.OrderRepository;
+import com.dianshang.admin.permission.support.PermissionSecurityHelper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,19 +46,22 @@ public class FinanceService {
     private final OrderRepository orderRepository;
     private final FinanceLedgerService ledgerService;
     private final DashboardFinanceSync dashboardFinanceSync;
+    private final PermissionSecurityHelper permissionSecurityHelper;
 
     public FinanceService(FinTransactionRecordRepository transactionRepository,
                          FinWithdrawApplyRepository withdrawRepository,
                          MemberRepository memberRepository,
                          OrderRepository orderRepository,
                          FinanceLedgerService ledgerService,
-                         DashboardFinanceSync dashboardFinanceSync) {
+                         DashboardFinanceSync dashboardFinanceSync,
+                         PermissionSecurityHelper permissionSecurityHelper) {
         this.transactionRepository = transactionRepository;
         this.withdrawRepository = withdrawRepository;
         this.memberRepository = memberRepository;
         this.orderRepository = orderRepository;
         this.ledgerService = ledgerService;
         this.dashboardFinanceSync = dashboardFinanceSync;
+        this.permissionSecurityHelper = permissionSecurityHelper;
     }
 
     public Map<String, Object> reconcileGlobal() {
@@ -159,6 +163,7 @@ public class FinanceService {
 
     @Transactional
     public void verifyWithdraw(WithdrawVerifyRequest req, String operator) {
+        permissionSecurityHelper.assertPerm("finance:withdraw:verify");
         FinWithdrawApply apply = withdrawRepository.findByApplyNo(req.getApplyNo())
                 .orElseThrow(() -> new BusinessException("提现申请不存在"));
         if (apply.getVerifyStatus() != 0) {

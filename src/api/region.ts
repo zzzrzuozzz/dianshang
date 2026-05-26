@@ -4,6 +4,8 @@ export interface RegionItem {
   code: string
   name: string
   level: number
+  parentCode?: string
+  hasChildren?: boolean
 }
 
 /** GET /api/system/region/list-by-parent — 省市区懒加载 */

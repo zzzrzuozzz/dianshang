@@ -27,4 +27,6 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>, JpaSp
     long countByDeletedFalseAndOrderStatusAndShipStatusNot(String orderStatus, String shipStatus);
 
     long countByDeletedFalseAndAfterSalesStatusNot(String afterSalesStatus);
+
+    List<OrderEntity> findByDeletedFalseAndOrderStatusAndCreateTimeBefore(String orderStatus, LocalDateTime createTime);
 }

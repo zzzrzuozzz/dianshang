@@ -46,6 +46,8 @@ public class RegionService {
         vo.setCode(e.getCode());
         vo.setName(e.getName());
         vo.setLevel(e.getLevelNum());
+        vo.setParentCode(e.getParentCode());
+        vo.setHasChildren(e.getLevelNum() != null && e.getLevelNum() < 3);
         return vo;
     }
 }

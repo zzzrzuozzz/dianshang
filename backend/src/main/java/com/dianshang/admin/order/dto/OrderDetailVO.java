@@ -1,5 +1,6 @@
 package com.dianshang.admin.order.dto;
 
+import com.dianshang.admin.system.dto.PlatformHintsVO;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -41,6 +42,7 @@ public class OrderDetailVO {
     private List<StepVO> steps;
     private AfterSaleBlockVO afterSale;
     private List<String> actions;
+    private PlatformHintsVO platformHints;
 
     @Data
     public static class ProductLineVO {
@@ -67,6 +69,7 @@ public class OrderDetailVO {
         private BigDecimal coupon;
         private BigDecimal payableSubtotal;
         private BigDecimal actualPaid;
+        private String freightNote;
     }
 
     @Data

@@ -163,6 +163,7 @@
             <template v-if="pageType === 'list'">
               <el-button
                 v-if="row.orderStatus === 'pending_ship'"
+                v-perm="'order:ship'"
                 type="success"
                 size="small"
                 plain
@@ -172,6 +173,7 @@
               </el-button>
               <el-button
                 v-if="row.orderStatus === 'pending_ship' || row.orderStatus === 'shipped'"
+                v-perm="'order:refund'"
                 type="danger"
                 size="small"
                 plain

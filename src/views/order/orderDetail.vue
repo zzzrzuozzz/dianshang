@@ -26,6 +26,23 @@
       </div>
     </el-card>
 
+    <el-alert
+      v-if="orderInfo.platformHints"
+      type="info"
+      :closable="false"
+      show-icon
+      class="panel-card platform-hints"
+    >
+      <template #title>平台规则（来自系统设置）</template>
+      <template #default>
+        客服热线：{{ orderInfo.platformHints.servicePhone }}；
+        {{ orderInfo.platformHints.freeShipRuleText }}；
+        {{ orderInfo.platformHints.unpaidCloseRuleText }}；
+        当前库存策略：{{ orderInfo.platformHints.stockDeductLabel }}
+        <span v-if="orderInfo.payment?.freightNote">；{{ orderInfo.payment.freightNote }}</span>
+      </template>
+    </el-alert>
+
     <!-- 步骤条 -->
     <el-card shadow="never" class="panel-card">
       <el-steps :active="activeStep" align-center finish-status="success">

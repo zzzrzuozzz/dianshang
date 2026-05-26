@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { getToken } from '@/utils/auth'
+import { usePermission } from '@/utils/permissionStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -428,6 +430,42 @@ const router = createRouter({
           component: () => import('@/views/finance/withdraw.vue'),
           meta: { title: '财务管理', subTitle: '提现审批' },
         },
+        {
+          path: 'setting/index',
+          name: 'SettingIndex',
+          component: () => import('@/views/setting/index.vue'),
+          meta: { title: '系统设置', subTitle: '平台基础信息' },
+        },
+        {
+          path: 'setting/region',
+          name: 'SettingRegion',
+          component: () => import('@/views/setting/region.vue'),
+          meta: { title: '系统设置', subTitle: '行政区划' },
+        },
+        {
+          path: 'setting/maintenance',
+          name: 'SettingMaintenance',
+          component: () => import('@/views/setting/maintenance.vue'),
+          meta: { title: '系统设置', subTitle: '对账与维护' },
+        },
+        {
+          path: 'permission/menu',
+          name: 'PermissionMenu',
+          component: () => import('@/views/permission/menu.vue'),
+          meta: { title: '权限管理', subTitle: '菜单管理' },
+        },
+        {
+          path: 'permission/role',
+          name: 'PermissionRole',
+          component: () => import('@/views/permission/role.vue'),
+          meta: { title: '权限管理', subTitle: '角色管理' },
+        },
+        {
+          path: 'permission/user',
+          name: 'PermissionUser',
+          component: () => import('@/views/permission/user.vue'),
+          meta: { title: '权限管理', subTitle: '管理员' },
+        },
       ],
     },
   ],
@@ -447,6 +485,12 @@ router.beforeEach((to, _from, next) => {
   }
   if (!token) {
     next({ path: '/login', query: { redirect: to.fullPath } })
+    return
+  }
+  const { canAccessPath } = usePermission()
+  if (!canAccessPath(to.path)) {
+    ElMessage.warning('无权限访问该页面')
+    next('/dashboard')
     return
   }
   next()

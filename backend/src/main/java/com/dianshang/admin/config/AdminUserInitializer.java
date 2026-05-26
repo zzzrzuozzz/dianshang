@@ -31,6 +31,7 @@ public class AdminUserInitializer implements CommandLineRunner {
             user.setGender("male");
             user.setAvatar("https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png");
             user.setRoleName("超级管理员");
+            user.setStatus(1);
             user.setCreateTime(LocalDateTime.now());
             adminUserRepository.save(user);
         }

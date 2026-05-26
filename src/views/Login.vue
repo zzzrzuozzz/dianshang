@@ -17,7 +17,7 @@
           <rect x="4" y="14" width="3" height="6" rx="1.5" fill="#409EFF" />
           <rect x="25" y="14" width="3" height="6" rx="1.5" fill="#409EFF" />
         </svg>
-        <h1 class="login-title">暴走电商 | 管理后台</h1>
+        <h1 class="login-title">{{ shopName }} | 管理后台</h1>
       </header>
 
       <el-form
@@ -72,11 +72,17 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock, Lightning } from '@element-plus/icons-vue'
 import { login } from '@/api/auth'
+import { usePlatformConfig } from '@/composables/usePlatformConfig'
+
+const { shopName, loadPublicPlatformConfig } = usePlatformConfig()
+onMounted(() => {
+  loadPublicPlatformConfig()
+})
 
 interface LoginForm {
   username: string

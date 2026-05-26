@@ -27,10 +27,18 @@ export interface QuickAccessDto {
   iconColor: string
 }
 
+export interface PlatformBannerDto {
+  shopName: string
+  servicePhone: string
+  freeShipRuleText: string
+  settingsPath: string
+}
+
 export interface DashboardOverviewDto {
   stats: StatCardDto[]
   pendingTasks: PendingTaskDto[]
   quickAccess: QuickAccessDto[]
+  platformBanner?: PlatformBannerDto
   chart: {
     dates: string[]
     sales: number[]

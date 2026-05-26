@@ -1,0 +1,3 @@
+-- 旧 H2 开发库增量升级（CREATE TABLE IF NOT EXISTS 不会补列）
+ALTER TABLE sys_admin_user ADD COLUMN IF NOT EXISTS status TINYINT NOT NULL DEFAULT 1;
+ALTER TABLE dashboard_daily_metric ADD COLUMN IF NOT EXISTS yesterday_sales_amount DECIMAL(14, 2) NOT NULL DEFAULT 0;

@@ -133,6 +133,49 @@ mvn spring-boot:run
 
 数据由 `oms_order`、`ums_member`、`pms_product`、`pms_category` 与 `dashboard_daily_metric` 聚合；订单/指标变更后图表随接口刷新。
 
+## 权限管理接口（RBAC）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/system/menu/tree` | 菜单权限树 |
+| POST | `/api/system/menu/save` | 保存菜单/按钮 |
+| DELETE | `/api/system/menu/{id}` | 删除菜单 |
+| POST | `/api/system/role/page` | 角色分页 |
+| GET | `/api/system/role/options` | 角色下拉 |
+| GET | `/api/system/role/{id}/menu-ids` | 角色已分配菜单 ID |
+| POST | `/api/system/role/save` | 保存角色 |
+| PUT | `/api/system/role/{id}/status` | 启用/禁用角色 |
+| POST | `/api/system/role/save-permissions` | 分配权限（事务内先删后插） |
+| POST | `/api/system/admin/page` | 管理员分页 |
+| POST | `/api/system/admin/save` | 保存管理员及角色 |
+| PUT | `/api/system/admin/{id}/status` | 启用/禁用管理员 |
+| GET | `/api/auth/session` | 刷新当前用户菜单与 perms |
+
+登录响应含 `menus`、`roleKeys`、`perms`；`admin` 角色拥有全部菜单。演示账号：`finance` / `finance123`（仅财务模块）。
+
+**鉴权闭环**：
+- 菜单/角色/管理员维护接口（`/api/system/menu|role|admin/**`）仅超级管理员可访问。
+- JWT 过滤器注入 `roleKey` 与按钮 `perms` 到 Spring Security 上下文。
+- 敏感操作服务端校验：`order:ship`、`order:refund`、`finance:withdraw:verify`。
+- 前端：`DynamicMenu` 动态侧栏、`canAccessPath` 路由守卫、`v-perm` 按钮级显隐；布局挂载时 `GET /api/auth/session` 刷新权限。
+
+## 系统设置接口（`/api/system`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/system/config/public` | 公开配置（商城名、客服、包邮门槛、库存策略，无需 Token） |
+| GET | `/api/system/config/platform` | 平台基础信息（表单结构化） |
+| PUT | `/api/system/config/platform` | 保存平台基础信息 |
+| GET | `/api/system/config/get-all` | 全部 Key-Value 配置 |
+| PUT | `/api/system/config/update-batch` | 批量更新配置项 |
+| GET | `/api/system/region/list-by-parent` | 省市区懒加载 |
+| POST | `/api/system/maintenance/clear-cache` | 清除配置 JVM 缓存 |
+| GET | `/api/system/maintenance/initializer-status` | 启动种子脚本健康检查 |
+
+表：`sys_config`（动态扩展，无需改表结构即可新增配置键）。
+
+**全局联动**：配置变更 → 登录页/侧栏品牌、首页横幅、订单详情平台规则；`unpaid_close_minutes` 驱动定时关单；`stock_deduct_strategy` 驱动发货出库策略；清缓存后重新加载配置。
+
 ## 模块1 接口
 
 | 方法 | 路径 | 说明 |

@@ -53,6 +53,7 @@
           <template #default="{ row }">
             <el-button
               v-if="row.verifyStatus === 0"
+              v-perm="'finance:withdraw:verify'"
               type="primary"
               link
               @click="openVerify(row)"

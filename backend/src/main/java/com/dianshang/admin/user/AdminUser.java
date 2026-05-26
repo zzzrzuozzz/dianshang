@@ -31,6 +31,9 @@ public class AdminUser {
     @Column(name = "role_name")
     private String roleName;
 
+    @Column(nullable = false)
+    private Integer status = 1;
+
     @Column(name = "create_time")
     private LocalDateTime createTime;
 }

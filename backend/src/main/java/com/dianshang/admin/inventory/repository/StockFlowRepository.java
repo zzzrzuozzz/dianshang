@@ -8,4 +8,6 @@ public interface StockFlowRepository extends JpaRepository<StockFlowEntity, Long
         JpaSpecificationExecutor<StockFlowEntity> {
 
     long countByFlowType(String flowType);
+
+    boolean existsByOrderIdAndFlowType(String orderId, String flowType);
 }

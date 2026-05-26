@@ -11,6 +11,15 @@ public class DashboardOverviewVO {
     private List<PendingTaskVO> pendingTasks;
     private List<QuickAccessVO> quickAccess;
     private ChartVO chart;
+    private PlatformBannerVO platformBanner;
+
+    @Data
+    public static class PlatformBannerVO {
+        private String shopName;
+        private String servicePhone;
+        private String freeShipRuleText;
+        private String settingsPath;
+    }
 
     @Data
     public static class StatCardVO {

@@ -1,5 +1,6 @@
 package com.dianshang.admin.security;
 
+import com.dianshang.admin.permission.service.PermissionQueryService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,15 +13,19 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final PermissionQueryService permissionQueryService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
+                                   PermissionQueryService permissionQueryService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.permissionQueryService = permissionQueryService;
     }
 
     @Override
@@ -30,11 +35,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token)) {
             try {
                 Long userId = jwtTokenProvider.getUserId(token);
-                var auth = new UsernamePasswordAuthenticationToken(
-                        userId,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-                );
+                permissionQueryService.assertAdminEnabled(userId);
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+                permissionQueryService.roleKeysForUser(userId).forEach(key ->
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + key.toUpperCase())));
+                permissionQueryService.permsForUser(userId).forEach(perm ->
+                        authorities.add(new SimpleGrantedAuthority(perm)));
+                var auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception ignored) {
                 SecurityContextHolder.clearContext();

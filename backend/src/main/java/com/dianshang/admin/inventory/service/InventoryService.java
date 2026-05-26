@@ -11,6 +11,7 @@ import com.dianshang.admin.inventory.support.InventorySpecifications;
 import com.dianshang.admin.inventory.support.SecurityOperator;
 import com.dianshang.admin.inventory.support.StockFlowSpecifications;
 import com.dianshang.admin.order.entity.OrderEntity;
+import com.dianshang.admin.system.service.SysConfigService;
 import com.dianshang.admin.product.entity.Product;
 import com.dianshang.admin.product.entity.ProductBrand;
 import com.dianshang.admin.product.entity.ProductCategory;
@@ -43,19 +44,22 @@ public class InventoryService {
     private final InventorySkuRepository inventorySkuRepository;
     private final StockFlowRepository stockFlowRepository;
     private final SecurityOperator securityOperator;
+    private final SysConfigService sysConfigService;
 
     public InventoryService(ProductRepository productRepository,
                           ProductCategoryRepository categoryRepository,
                           ProductBrandRepository brandRepository,
                           InventorySkuRepository inventorySkuRepository,
                           StockFlowRepository stockFlowRepository,
-                          SecurityOperator securityOperator) {
+                          SecurityOperator securityOperator,
+                          SysConfigService sysConfigService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
         this.inventorySkuRepository = inventorySkuRepository;
         this.stockFlowRepository = stockFlowRepository;
         this.securityOperator = securityOperator;
+        this.sysConfigService = sysConfigService;
     }
 
     public InventoryPageVO list(String keyword, String categoryCode, String supplier,
@@ -185,9 +189,39 @@ public class InventoryService {
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * 按平台配置的库存扣减策略出库（幂等：同一订单仅扣减一次 sales_out）。
+     * order：发货时扣减；pay：已付款（有 payTime）后发货时扣减。
+     */
+    @Transactional
+    public void deductStockForOrder(OrderEntity order, String scene) {
+        if (order == null || !StringUtils.hasText(order.getOrderNo())) {
+            return;
+        }
+        if (stockFlowRepository.existsByOrderIdAndFlowType(order.getOrderNo(), "sales_out")) {
+            return;
+        }
+        boolean onPay = sysConfigService.isStockDeductOnPay();
+        if (onPay) {
+            if (!"pay".equals(scene) && !"ship".equals(scene)) {
+                return;
+            }
+            if (order.getPayTime() == null && !"pending_ship".equals(order.getOrderStatus())
+                    && !"paid".equals(order.getOrderStatus())) {
+                return;
+            }
+        } else if (!"ship".equals(scene) && !"order".equals(scene)) {
+            return;
+        }
+        shipOutbound(order);
+    }
+
     @Transactional
     public void shipOutbound(OrderEntity order) {
         if (!StringUtils.hasText(order.getProductNo())) {
+            return;
+        }
+        if (stockFlowRepository.existsByOrderIdAndFlowType(order.getOrderNo(), "sales_out")) {
             return;
         }
         Product product = productRepository.findByProductNoAndDeletedFalse(order.getProductNo()).orElse(null);

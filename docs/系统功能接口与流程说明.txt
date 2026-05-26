@@ -1,0 +1,515 @@
+================================================================================
+  暴走电商管理后台 — 功能 / 接口 / 流程全览
+================================================================================
+
+技术栈：Vue 3 + Element Plus + ECharts（前端）
+       Spring Boot 3.2 + JPA + JWT + H2/MySQL（后端）
+
+默认地址：后端 http://localhost:8080
+         前端 npm run dev（/api 代理到 8080）
+默认账号：admin / admin123
+
+统一响应：{ "code": 200, "message": "success", "data": ... }
+         （除 CSV/文件流外均需 Header: Authorization: Bearer <token>）
+
+================================================================================
+一、前端页面总览（按侧栏模块）
+================================================================================
+
+【首页】
+  /dashboard                    首页 KPI、销售趋势、待办、快捷入口
+
+【个人中心】
+  /profile/index                资料查看/修改、修改密码
+
+【商品管理】
+  /product/list                 商品列表、上下架、批量操作
+  /product/add                  新建/编辑商品（含 SKU）
+  /product/audit                商品审核
+  /product/recycle              回收站（恢复/彻底删除）
+  /product/comment              评价看板与列表
+  /product/category             分类管理
+  /product/brand                品牌管理
+
+【订单管理】
+  /order/list                   订单列表、发货、退款等
+  /order/confirm                待确认收货
+  /order/after-sale             售后列表
+  /order/setting                退货原因、快递模板、收发地址
+  /order/detail/:orderId        订单详情、快递单预览
+
+【库存管理】
+  /inventory/list               库存看板（全部/预警/缺货）
+  /inventory/flow               出入库流水
+
+【用户管理】
+  /user/list                    用户列表
+  /user/detail/:userId          用户详情
+  /user/edit/:userId            编辑用户
+  /user/level                   会员等级
+  /user/tag                     标签管理
+  /user/growth                  成长值/积分/任务/规则/奖励
+
+【营销管理】
+  /promotion/seckill            秒杀活动
+  /promotion/seckill/time       秒杀时段
+  /promotion/seckill/:activityId/products   秒杀选品
+  /promotion/seckill/:activityId/sku/:timeId  秒杀 SKU
+  /promotion/group-buy          团购活动（含时段、SKU 子页）
+  /promotion/coupon             优惠券
+  /promotion/coupon/:id/detail  优惠券领取明细
+
+【运营管理】
+  /ops/system-message           系统消息推送
+  /ops/sms                      短信推送
+  /ops/station-message          站内信
+  /ops/advertisement            广告位
+
+【内容管理】
+  /content/topic                专题管理
+  /content/topic/type           专题类型
+  /content/help                 帮助文章
+  /content/help/type            帮助分类
+
+【数据统计】
+  /stats/transaction            交易统计
+  /stats/flow                   流量统计
+  /stats/product                商品统计
+
+【财务管理】
+  /finance/index                资金看板
+  /finance/statement            交易流水
+  /finance/withdraw             提现审批
+
+【全局】
+  顶栏全局搜索                  商品/订单/用户/财务流水，点击跳转对应页
+
+================================================================================
+二、接口清单（按模块）
+================================================================================
+
+--------------------------------------------------------------------------------
+1. 认证与系统
+--------------------------------------------------------------------------------
+POST   /api/auth/login                              登录，返回 JWT
+GET    /api/dashboard/overview                     首页看板
+GET    /api/system/user/profile                    当前用户资料
+PUT    /api/system/user/profile                    更新资料
+PUT    /api/system/user/profile/updatePwd          修改密码
+GET    /api/system/region/list-by-parent           省市区懒加载（parentCode=0 为省）
+POST   /api/upload/image?biz=ops                    图片上传 multipart，返回 url
+
+--------------------------------------------------------------------------------
+2. 商品 /api/product
+--------------------------------------------------------------------------------
+GET    /api/product/{productNo}                    商品详情（编辑回显）
+POST   /api/product                                新建商品
+PUT    /api/product/{productNo}                    更新商品
+GET    /api/product/list                           商品列表（含 Tab 计数）
+GET    /api/product/audit/list                     审核列表
+PUT    /api/product/{id}/status                    上/下架
+DELETE /api/product/{id}                           软删除（移入回收站）
+GET    /api/product/recycle/list                   回收站列表
+POST   /api/product/recycle/restore                恢复 { "ids": ["..."] }
+DELETE /api/product/recycle/{productNo}            彻底删除
+DELETE /api/product/recycle/batch                  批量彻底删除
+POST   /api/product/batch/on                       批量上架
+POST   /api/product/batch/off                      批量下架
+DELETE /api/product/batch                          批量删除
+POST   /api/product/audit/{id}                     单条审核
+POST   /api/product/audit/batch                    批量审核
+GET    /api/product/category/tree                  分类树
+GET    /api/product/category/options               分类下拉
+GET    /api/product/category/list                  分类分页列表
+POST   /api/product/category                       新增分类
+PUT    /api/product/category/{id}                  更新分类
+DELETE /api/product/category/{id}                 删除分类
+PUT    /api/product/category/{id}/visible          显隐
+GET    /api/product/brand/list                      品牌列表
+POST   /api/product/brand                          新增品牌
+PUT    /api/product/brand/{id}                     更新品牌
+DELETE /api/product/brand/{id}                     删除品牌
+PUT    /api/product/brand/{id}/visible             品牌显隐
+GET    /api/product/comment/overview               评价看板
+GET    /api/product/comment/list                    评价列表
+POST   /api/product/comment/{productNo}/feature     设为精选
+DELETE /api/product/comment/{productNo}             删除评价
+
+--------------------------------------------------------------------------------
+3. 订单 /api/order
+--------------------------------------------------------------------------------
+GET    /api/order/list                             订单列表
+       参数：pageType=list|confirm，status Tab，商品/订单号/物流/手机/时间筛选
+GET    /api/order/detail/{orderNo}                 订单详情
+POST   /api/order/{orderNo}/ship                    发货（可传物流公司与单号）
+POST   /api/order/{orderNo}/reissue                 补发（扣库存 + reissue 流水）
+POST   /api/order/{orderNo}/refund                  退款
+POST   /api/order/{orderNo}/confirm                 确认收货
+POST   /api/order/batch/confirm                     批量确认收货 { "orderNos": [...] }
+GET    /api/order/after-sale/list                   售后列表
+
+【订单设置 - 退货原因】
+GET    /api/order/setting/return-reason/list
+POST   /api/order/setting/return-reason
+PUT    /api/order/setting/return-reason/{code}
+DELETE /api/order/setting/return-reason/{code}
+PUT    /api/order/setting/return-reason/{code}/visible
+
+【订单设置 - 快递单模板】
+GET    /api/order/setting/express-template/list
+POST   /api/order/setting/express-template
+PUT    /api/order/setting/express-template/{code}
+DELETE /api/order/setting/express-template/{code}
+PUT    /api/order/setting/express-template/{code}/visible
+PUT    /api/order/setting/express-template/{code}/default
+
+【订单设置 - 地址 type=ship|return】
+GET    /api/order/setting/address/list?type=ship|return
+POST   /api/order/setting/address
+PUT    /api/order/setting/address/{code}
+DELETE /api/order/setting/address/{code}
+PUT    /api/order/setting/address/{code}/visible
+PUT    /api/order/setting/address/{code}/default
+
+【关联】
+GET    /api/ops/express/preview/{orderId}          快递单套打预览数据
+
+--------------------------------------------------------------------------------
+4. 库存 /api/inventory
+--------------------------------------------------------------------------------
+GET    /api/inventory/list                         Tab: all / warning / out
+POST   /api/inventory/update                        编辑商品/SKU 库存
+GET    /api/inventory/flow                          Tab: all / sales_out / return_in /
+                                                    manual_out / manual_in / reissue
+GET    /api/inventory/flow/export                   流水 CSV 导出
+
+--------------------------------------------------------------------------------
+5. 用户 /api/user
+--------------------------------------------------------------------------------
+GET    /api/user/list                              用户列表（tab、日期筛选）
+GET    /api/user/detail/{userNo}                    用户详情（地址、订单）
+POST   /api/user/update                             编辑资料
+GET    /api/user/export                             导出用户 CSV
+GET    /api/user/level/list
+GET    /api/user/level/detail/{code}
+POST   /api/user/level/save
+DELETE /api/user/level/{code}
+GET    /api/user/level/options
+GET    /api/user/tag/list
+GET    /api/user/tag/detail/{code}
+POST   /api/user/tag/save
+DELETE /api/user/tag/{code}
+GET    /api/user/tag/users
+POST   /api/user/tag/users/remove
+GET    /api/user/growth/list
+POST   /api/user/growth/adjust
+POST   /api/user/growth/batch
+GET    /api/user/growth/tasks
+POST   /api/user/growth/tasks/save
+GET    /api/user/growth/rules
+POST   /api/user/growth/rules/save
+GET    /api/user/growth/rewards
+POST   /api/user/growth/rewards/save
+GET    /api/user/growth/ledger
+GET    /api/user/growth/export
+
+--------------------------------------------------------------------------------
+6. 营销 /api/promotion
+--------------------------------------------------------------------------------
+GET    /api/promotion/products/picker               商品选择器（营销/内容复用）
+
+【秒杀】
+GET    /api/promotion/seckill/list
+POST   /api/promotion/seckill/save
+POST   /api/promotion/seckill/{activityCode}/online
+DELETE /api/promotion/seckill/{activityCode}
+GET    /api/promotion/seckill/time/list
+POST   /api/promotion/seckill/time/save
+POST   /api/promotion/seckill/time/{slotCode}/enabled
+DELETE /api/promotion/seckill/time/{slotCode}
+GET    /api/promotion/seckill/{activityCode}/slots
+GET    /api/promotion/seckill/{activityCode}/sku/{slotCode}
+POST   /api/promotion/seckill/sku/save
+
+【团购】
+GET    /api/promotion/group-buy/list
+POST   /api/promotion/group-buy/save
+POST   /api/promotion/group-buy/{activityCode}/online
+DELETE /api/promotion/group-buy/{activityCode}
+GET    /api/promotion/group-buy/{activityCode}/time/list
+POST   /api/promotion/group-buy/time/save
+POST   /api/promotion/group-buy/{activityCode}/time/{slotCode}/enabled
+DELETE /api/promotion/group-buy/{activityCode}/time/{slotCode}
+GET    /api/promotion/group-buy/{activityCode}/sku/{slotCode}
+POST   /api/promotion/group-buy/sku/save
+
+【优惠券】
+GET    /api/promotion/coupon/list
+GET    /api/promotion/coupon/{couponCode}
+POST   /api/promotion/coupon/save
+POST   /api/promotion/coupon/{couponCode}/online
+DELETE /api/promotion/coupon/{couponCode}
+GET    /api/promotion/coupon/{couponCode}/history
+
+--------------------------------------------------------------------------------
+7. 运营 /api/ops
+--------------------------------------------------------------------------------
+GET    /api/ops/notification/list                   msgType=SYSTEM|SMS|STATION
+GET    /api/ops/notification/{notifyCode}
+POST   /api/ops/notification/save
+POST   /api/ops/notification/estimate               预估触达人数
+POST   /api/ops/notification/{notifyCode}/resend    发送/再发
+DELETE /api/ops/notification/{notifyCode}
+POST   /api/ops/notification/batch/delete
+POST   /api/ops/notification/batch/resend
+
+GET    /api/ops/advertisement/list
+GET    /api/ops/advertisement/{advCode}
+POST   /api/ops/advertisement/save
+POST   /api/ops/advertisement/{advCode}/online      { "online": true }
+POST   /api/ops/advertisement/{advCode}/pin         置顶
+DELETE /api/ops/advertisement/{advCode}
+
+GET    /api/ops/global/search?keyword=              全局搜索（各分类最多 5 条）
+GET    /api/ops/express/preview/{orderId}
+
+--------------------------------------------------------------------------------
+8. 内容 /api/content
+--------------------------------------------------------------------------------
+【专题类型 /api/content/topic/type】
+GET    /list、/options、/{id}
+POST   /save
+PUT    /{id}/visible
+DELETE /{id}
+POST   /batch/delete
+
+【专题 /api/content/topic】
+GET    /list、/detail/{topicCode}、/{topicCode}
+POST   /save
+PUT    /{topicCode}/status
+DELETE /{topicCode}
+POST   /comment/reply、/comment/review
+DELETE /comment/{commentCode}
+POST   /comment/batch/delete
+
+【帮助分类 /api/content/help/type】
+同专题类型结构
+
+【帮助文章 /api/content/help】
+GET    /list、/{articleCode}
+POST   /save
+PUT    /{articleCode}/status
+DELETE /{articleCode}
+
+--------------------------------------------------------------------------------
+9. 财务 /api/finance
+--------------------------------------------------------------------------------
+GET    /api/finance/overview?granularity=day|month  KPI、走势图、待审核提现 Top5
+POST   /api/finance/statement/page                  流水分页
+POST   /api/finance/statement/export                 CSV（最多 5000 条）
+POST   /api/finance/withdraw/page                    tab=all|pending|transferring|done
+PUT    /api/finance/withdraw/verify                 { applyNo, passed, remark }
+POST   /api/finance/reconcile                        全库对账 + 同步首页指标
+
+流水类型 tradeType：
+  ORDER_IN      订单收入
+  REFUND_OUT    退款支出
+  WITHDRAW      提现
+  COMMISSION    平台手续费
+
+数据表：fin_transaction_record、fin_withdraw_apply
+
+--------------------------------------------------------------------------------
+10. 统计 /api/stats
+--------------------------------------------------------------------------------
+GET    /api/stats/transaction/overview              range=week|month 或 startDate+endDate
+GET    /api/stats/flow/report
+GET    /api/stats/product/category                  分页 page、pageSize
+GET    /api/stats/product/ranking
+
+数据来源：oms_order、ums_member、pms_product、pms_category、dashboard_daily_metric
+
+================================================================================
+三、核心业务流程
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 登录与访问
+--------------------------------------------------------------------------------
+1. 用户访问任意受保护路由
+2. 前端 router 检查 localStorage 中的 Token
+3. 无 Token → 跳转 /login → POST /api/auth/login → 存 JWT → 进入 /dashboard
+4. 有 Token → 请求头带 Authorization: Bearer <token>
+
+--------------------------------------------------------------------------------
+3.2 订单全生命周期（联动库存 + 财务）
+--------------------------------------------------------------------------------
+
+订单状态（主要）：
+  pending_payment   待付款
+  pending_ship      待发货
+  shipped           已发货
+  completed         已完成
+  closed            已关闭
+  refunded          已退款
+
+操作与联动：
+
+  【发货 ship】
+    订单：pending_ship/paid → shipped，写入物流信息
+    库存：shipOutbound（sales_out）
+    财务：FinanceOrderBridge.recordIncomeIfPaid → ORDER_IN（幂等，订单号+类型防重）
+
+  【确认收货 confirm】
+    订单：shipped → completed，ship_status=signed
+    财务：再次尝试 ORDER_IN（已存在则跳过）
+
+  【退款 refund】
+    订单：→ refunded，创建售后单
+    库存：returnInbound（return_in）
+    财务：REFUND_OUT
+
+  【补发 reissue】
+    订单：更新物流（已发货/已完成可操作）
+    库存：reissueOutbound（reissue）
+    财务：不记收入
+
+--------------------------------------------------------------------------------
+3.3 财务与首页/统计的数据同源
+--------------------------------------------------------------------------------
+
+触发点：
+  - 订单发货/确认收货 → ORDER_IN
+  - 订单退款 → REFUND_OUT
+  - 提现审核通过 → WITHDRAW
+  - 应用启动 FinanceDataInitializer → reconcileGlobal()
+  - 打开资金看板 → 前端调用 POST /api/finance/reconcile
+  - GET /api/dashboard/overview → refreshPendingTasks()
+
+同步内容（DashboardFinanceSync）：
+  - fin_transaction_record 聚合销售额 → dashboard_daily_metric（近 7 日）
+  - 订单/提现计数 → dashboard_pending_task
+
+首页待办项与跳转：
+  pendingShipment   → /order/list
+  pendingRefund     → /order/after-sale
+  pendingReceipt    → /order/confirm
+  pendingAfterSale  → /order/after-sale
+  pendingWithdraw   → /finance/withdraw
+
+全局搜索财务命中：
+  流水号/订单号 → /finance/statement?keyword=xxx
+
+--------------------------------------------------------------------------------
+3.4 提现审批流程
+--------------------------------------------------------------------------------
+1. 用户在 fin_withdraw_apply 提交申请（verify_status=0 待审核）
+2. 管理员 PUT /api/finance/withdraw/verify
+   - passed=true：status=3，写 WITHDRAW 流水，refreshGlobalMetrics
+   - passed=false：status=2，必填 remark，refreshPendingTasks
+3. 仅 verify_status=0 可审批（幂等保护）
+
+--------------------------------------------------------------------------------
+3.5 商品 → 订单 → 库存
+--------------------------------------------------------------------------------
+- 商品含 SKU 库存
+- 发货/补发扣减库存，退款回库
+- 商品软删除进入回收站，可恢复或彻底删除
+
+--------------------------------------------------------------------------------
+3.6 运营推送流程
+--------------------------------------------------------------------------------
+保存草稿 → POST /estimate 预估人数 → 发送/再发
+类型：系统消息、短信、站内信
+图片：POST /api/upload/image?biz=ops
+
+================================================================================
+四、主要数据表（业务理解）
+================================================================================
+
+系统/看板：
+  管理员用户、dashboard_daily_metric、dashboard_pending_task
+
+商品：
+  pms_product、分类、品牌、评价
+
+订单：
+  oms_order、oms_after_sale、退货原因/快递模板/地址设置表
+
+库存：
+  库存快照、出入库流水表
+
+用户：
+  ums_member、会员等级、标签、成长积分相关表
+
+营销：
+  秒杀/团购/优惠券活动及 SKU 表
+
+运营：
+  推送通知、广告位
+
+内容：
+  专题、专题类型、帮助、帮助分类
+
+财务：
+  fin_transaction_record（流水号唯一）
+  fin_withdraw_apply
+
+区划：
+  sys_region（国标，RegionFullSqlImporter 首次导入）
+
+================================================================================
+五、启动时种子数据（CommandLineRunner）
+================================================================================
+
+AdminUserInitializer        默认 admin 账号
+RegionFullSqlImporter       国标区划（仅首次）
+ProductDataInitializer      演示商品
+OrderDataInitializer        演示订单
+OrderSettingDataInitializer 退货原因、模板、地址
+MemberDataInitializer       用户、等级、标签
+InventoryDataInitializer    库存与流水
+PromotionDataInitializer    秒杀/团购/优惠券
+OpsDataInitializer          推送、广告
+ContentDataInitializer      专题、帮助
+FinanceDataInitializer      reconcileGlobal + 演示提现
+StatsOrderAlignInitializer  订单时间与看板日期对齐
+
+================================================================================
+六、联调与排错
+================================================================================
+
+启动后端：
+  cd backend
+  mvn spring-boot:run
+
+启动前端（项目根目录）：
+  npm run dev
+
+H2 库损坏：
+  删除 backend/data/dianshang.mv.db* 后重启
+
+财务/看板数据不一致：
+  打开资金看板（自动 reconcile）或 POST /api/finance/reconcile
+
+MySQL 模式：
+  mvn spring-boot:run -Dspring-boot.run.profiles=mysql
+  配置 application-mysql.yml
+
+================================================================================
+七、模块依赖关系
+================================================================================
+
+  商品 ──→ 订单 ──→ 库存
+              │
+              ├──→ 财务 ──→ 首页看板
+              │
+              └──→ 统计（与 dashboard_daily_metric、订单聚合）
+
+  全局搜索 ──→ 商品 / 订单 / 用户 / 财务流水页
+
+  营销、内容、运营 相对独立，商品选择复用 /api/promotion/products/picker
+
+================================================================================
+文档生成说明：与代码仓库同步，详见 backend/README.md
+================================================================================

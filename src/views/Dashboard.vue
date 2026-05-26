@@ -1,5 +1,23 @@
 <template>
   <div v-loading="loading" class="dashboard-page">
+    <el-card
+      v-if="dashboardData.platformBanner"
+      shadow="never"
+      class="platform-banner"
+      @click="handleQuickAccess(dashboardData.platformBanner.settingsPath)"
+    >
+      <div class="platform-banner__body">
+        <div>
+          <strong>{{ dashboardData.platformBanner.shopName }}</strong>
+          <span class="platform-banner__sep">|</span>
+          <span>客服 {{ dashboardData.platformBanner.servicePhone }}</span>
+          <span class="platform-banner__sep">|</span>
+          <span>{{ dashboardData.platformBanner.freeShipRuleText }}</span>
+        </div>
+        <el-button type="primary" link>平台设置</el-button>
+      </div>
+    </el-card>
+
     <!-- Row 1: 数据看板 -->
     <el-row :gutter="16" class="dashboard-row">
       <el-col
@@ -109,6 +127,7 @@ const dashboardData = reactive({
   stats: [],
   pendingTasks: [],
   quickAccess: [],
+  platformBanner: null,
   chart: {
     dates: [],
     sales: [],
@@ -132,6 +151,7 @@ const fetchDashboardData = async () => {
     dashboardData.pendingTasks = data.pendingTasks || []
     dashboardData.quickAccess = mapOverviewItems(data.quickAccess || [])
     dashboardData.chart = data.chart || { dates: [], sales: [], orders: [] }
+    dashboardData.platformBanner = data.platformBanner || null
     await nextTick()
     renderChart()
   } finally {
@@ -275,6 +295,28 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   padding: 20px;
   background-color: #f5f7fa;
+}
+
+.platform-banner {
+  margin-bottom: 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #ecf5ff, #f0f9eb);
+}
+
+.platform-banner__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  color: #303133;
+}
+
+.platform-banner__sep {
+  margin: 0 8px;
+  color: #c0c4cc;
 }
 
 .dashboard-row {

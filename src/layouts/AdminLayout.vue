@@ -9,7 +9,7 @@
           <circle cx="20" cy="17" r="2" fill="#fff" />
           <rect x="13" y="21" width="6" height="2" rx="1" fill="#fff" />
         </svg>
-        <span v-show="!collapsed" class="brand-text">暴走电商</span>
+        <span v-show="!collapsed" class="brand-text">{{ shopName }}</span>
       </div>
 
       <el-scrollbar class="menu-scroll">
@@ -23,107 +23,7 @@
           class="admin-menu"
           router
         >
-          <el-menu-item index="/dashboard">
-            <el-icon><HomeFilled /></el-icon>
-            <template #title>首页</template>
-          </el-menu-item>
-
-          <el-sub-menu index="product">
-            <template #title>
-              <el-icon><Goods /></el-icon>
-              <span>商品</span>
-            </template>
-            <el-menu-item index="/product/list">商品列表</el-menu-item>
-            <el-menu-item index="/product/add">添加商品</el-menu-item>
-            <el-menu-item index="/product/audit">商品审核</el-menu-item>
-            <el-menu-item index="/product/recycle">回收站</el-menu-item>
-            <el-menu-item index="/product/comment">商品评价</el-menu-item>
-            <el-menu-item index="/product/category">商品分类</el-menu-item>
-            <el-menu-item index="/product/brand">品牌管理</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="order">
-            <template #title>
-              <el-icon><List /></el-icon>
-              <span>订单</span>
-            </template>
-            <el-menu-item index="/order/list">订单列表</el-menu-item>
-            <el-menu-item index="/order/confirm">确认收货</el-menu-item>
-            <el-menu-item index="/order/after-sale">售后列表</el-menu-item>
-            <el-menu-item index="/order/setting">订单设置</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="inventory">
-            <template #title>
-              <el-icon><Box /></el-icon>
-              <span>库存管理</span>
-            </template>
-            <el-menu-item index="/inventory/list">库存看板</el-menu-item>
-            <el-menu-item index="/inventory/flow">出入库流水</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="user">
-            <template #title>
-              <el-icon><User /></el-icon>
-              <span>用户</span>
-            </template>
-            <el-menu-item index="/user/list">用户列表</el-menu-item>
-            <el-menu-item index="/user/tag">标签管理</el-menu-item>
-            <el-menu-item index="/user/level">会员等级</el-menu-item>
-            <el-menu-item index="/user/growth">成长值积分</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="promotion">
-            <template #title>
-              <el-icon><Ticket /></el-icon>
-              <span>营销</span>
-            </template>
-            <el-menu-item index="/promotion/seckill">秒杀活动</el-menu-item>
-            <el-menu-item index="/promotion/group-buy">团购活动</el-menu-item>
-            <el-menu-item index="/promotion/coupon">优惠券</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="ops">
-            <template #title>
-              <el-icon><Bell /></el-icon>
-              <span>运营</span>
-            </template>
-            <el-menu-item index="/ops/system-message">系统消息</el-menu-item>
-            <el-menu-item index="/ops/sms">短信</el-menu-item>
-            <el-menu-item index="/ops/station-message">站内信</el-menu-item>
-            <el-menu-item index="/ops/advertisement">广告位</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="content">
-            <template #title>
-              <el-icon><Document /></el-icon>
-              <span>内容</span>
-            </template>
-            <el-menu-item index="/content/topic">专题</el-menu-item>
-            <el-menu-item index="/content/topic/type">专题类型</el-menu-item>
-            <el-menu-item index="/content/help">帮助</el-menu-item>
-            <el-menu-item index="/content/help/type">帮助分类</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="stats">
-            <template #title>
-              <el-icon><DataAnalysis /></el-icon>
-              <span>统计</span>
-            </template>
-            <el-menu-item index="/stats/transaction">交易统计</el-menu-item>
-            <el-menu-item index="/stats/flow">流量统计</el-menu-item>
-            <el-menu-item index="/stats/product">商品统计</el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="finance">
-            <template #title>
-              <el-icon><Wallet /></el-icon>
-              <span>财务</span>
-            </template>
-            <el-menu-item index="/finance/index">资金看板</el-menu-item>
-            <el-menu-item index="/finance/statement">交易流水</el-menu-item>
-            <el-menu-item index="/finance/withdraw">提现审批</el-menu-item>
-          </el-sub-menu>
+          <DynamicMenu :menus="navMenus" />
         </el-menu>
       </el-scrollbar>
     </el-aside>
@@ -177,25 +77,18 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  HomeFilled,
-  Goods,
-  List,
-  Box,
-  User,
-  Ticket,
-  Fold,
-  Expand,
-  Refresh,
-  Bell,
-  Document,
-  DataAnalysis,
-  Wallet,
-  ArrowDown,
-} from '@element-plus/icons-vue'
+import { Fold, Expand, Refresh, Bell, ArrowDown } from '@element-plus/icons-vue'
 import GlobalSearch from '@/components/layout/GlobalSearch.vue'
+import DynamicMenu from '@/components/layout/DynamicMenu.vue'
+import { refreshAuthSession } from '@/api/auth'
 import { getProfile } from '@/api/profile'
 import { clearToken } from '@/utils/auth'
+import { usePlatformConfig } from '@/composables/usePlatformConfig'
+import { usePermission, clearPermissionSession } from '@/utils/permissionStore'
+
+const { shopName, loadPublicPlatformConfig } = usePlatformConfig()
+const { menus: permMenus } = usePermission()
+const navMenus = computed(() => permMenus.value || [])
 
 const route = useRoute()
 const router = useRouter()
@@ -234,6 +127,7 @@ const handleCommand = (command) => {
 
 const handleLogout = () => {
   clearToken()
+  clearPermissionSession()
   router.push('/login')
 }
 
@@ -250,7 +144,19 @@ const loadHeaderProfile = async () => {
   }
 }
 
-onMounted(loadHeaderProfile)
+const syncPermissionSession = async () => {
+  try {
+    await refreshAuthSession()
+  } catch {
+    /* 旧 Token 或无 RBAC 数据时忽略，登录页会重新拉取 */
+  }
+}
+
+onMounted(() => {
+  loadHeaderProfile()
+  loadPublicPlatformConfig()
+  syncPermissionSession()
+})
 </script>
 
 <style scoped>

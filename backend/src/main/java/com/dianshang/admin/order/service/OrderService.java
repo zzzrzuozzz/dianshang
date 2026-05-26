@@ -9,6 +9,8 @@ import com.dianshang.admin.order.repository.AfterSaleRepository;
 import com.dianshang.admin.order.repository.OrderRepository;
 import com.dianshang.admin.finance.service.FinanceOrderBridge;
 import com.dianshang.admin.inventory.service.InventoryService;
+import com.dianshang.admin.permission.support.PermissionSecurityHelper;
+import com.dianshang.admin.system.service.SysConfigService;
 import com.dianshang.admin.order.support.OrderDetailAssembler;
 import com.dianshang.admin.order.support.OrderListMapper;
 import com.dianshang.admin.order.support.OrderSpecifications;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -33,19 +36,25 @@ public class OrderService {
     private final ExpressTemplateService expressTemplateService;
     private final InventoryService inventoryService;
     private final FinanceOrderBridge financeOrderBridge;
+    private final SysConfigService sysConfigService;
+    private final PermissionSecurityHelper permissionSecurityHelper;
 
     public OrderService(OrderRepository orderRepository,
                         AfterSaleRepository afterSaleRepository,
                         OrderAddressService orderAddressService,
                         ExpressTemplateService expressTemplateService,
                         InventoryService inventoryService,
-                        FinanceOrderBridge financeOrderBridge) {
+                        FinanceOrderBridge financeOrderBridge,
+                        SysConfigService sysConfigService,
+                        PermissionSecurityHelper permissionSecurityHelper) {
         this.orderRepository = orderRepository;
         this.afterSaleRepository = afterSaleRepository;
         this.orderAddressService = orderAddressService;
         this.expressTemplateService = expressTemplateService;
         this.inventoryService = inventoryService;
         this.financeOrderBridge = financeOrderBridge;
+        this.sysConfigService = sysConfigService;
+        this.permissionSecurityHelper = permissionSecurityHelper;
     }
 
     public OrderPageVO list(String product, String orderId, String logisticsNo, String phone,
@@ -110,11 +119,29 @@ public class OrderService {
         if (returnAddress == null) {
             returnAddress = "广东省深圳市南山区科技园退货中心A栋";
         }
-        return OrderDetailAssembler.assemble(order, afterSale, returnAddress);
+        OrderDetailVO vo = OrderDetailAssembler.assemble(order, afterSale, returnAddress);
+        applyFreightFreeHint(order, vo);
+        vo.setPlatformHints(sysConfigService.buildPlatformHints());
+        return vo;
+    }
+
+    private void applyFreightFreeHint(OrderEntity order, OrderDetailVO vo) {
+        if (vo.getPayment() == null) {
+            return;
+        }
+        BigDecimal threshold = sysConfigService.getFreeShipThreshold();
+        boolean eligible = order.getActualAmount() != null
+                && order.getActualAmount().compareTo(threshold) >= 0;
+        if (eligible && Boolean.TRUE.equals(order.getFreightFree())) {
+            vo.getPayment().setFreightNote("已满足平台包邮规则（满 " + threshold.stripTrailingZeros().toPlainString() + " 元）");
+        } else if (eligible) {
+            vo.getPayment().setFreightNote("订单金额已达包邮门槛 " + threshold.stripTrailingZeros().toPlainString() + " 元");
+        }
     }
 
     @Transactional
     public void ship(String orderNo, ShipRequest request) {
+        permissionSecurityHelper.assertPerm("order:ship");
         OrderEntity order = requireOrder(orderNo);
         if (!"pending_ship".equals(order.getOrderStatus()) && !"paid".equals(order.getOrderStatus())) {
             throw new BusinessException("当前订单状态不可发货");
@@ -135,12 +162,13 @@ public class OrderService {
         }
         order.setDeliverySerial("FH" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + orderNo);
         orderRepository.save(order);
-        inventoryService.shipOutbound(order);
+        inventoryService.deductStockForOrder(order, "ship");
         financeOrderBridge.recordIncomeIfPaid(order);
     }
 
     @Transactional
     public void refund(String orderNo) {
+        permissionSecurityHelper.assertPerm("order:refund");
         OrderEntity order = requireOrder(orderNo);
         order.setOrderStatus("refunded");
         order.setAfterSalesStatus("refunded");

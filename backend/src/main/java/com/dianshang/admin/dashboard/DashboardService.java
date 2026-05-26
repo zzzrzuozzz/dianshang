@@ -2,6 +2,8 @@ package com.dianshang.admin.dashboard;
 
 import com.dianshang.admin.dashboard.dto.DashboardOverviewVO;
 import com.dianshang.admin.finance.service.DashboardFinanceSync;
+import com.dianshang.admin.system.service.SysConfigService;
+import com.dianshang.admin.system.support.SysConfigKeys;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -17,13 +19,16 @@ public class DashboardService {
     private final DashboardDailyMetricRepository metricRepository;
     private final DashboardPendingTaskRepository pendingTaskRepository;
     private final DashboardFinanceSync dashboardFinanceSync;
+    private final SysConfigService sysConfigService;
 
     public DashboardService(DashboardDailyMetricRepository metricRepository,
                               DashboardPendingTaskRepository pendingTaskRepository,
-                              DashboardFinanceSync dashboardFinanceSync) {
+                              DashboardFinanceSync dashboardFinanceSync,
+                              SysConfigService sysConfigService) {
         this.metricRepository = metricRepository;
         this.pendingTaskRepository = pendingTaskRepository;
         this.dashboardFinanceSync = dashboardFinanceSync;
+        this.sysConfigService = sysConfigService;
     }
 
     public DashboardOverviewVO getOverview() {
@@ -37,7 +42,17 @@ public class DashboardService {
         vo.setPendingTasks(buildPending());
         vo.setQuickAccess(buildQuickAccess());
         vo.setChart(buildChart(metrics));
+        vo.setPlatformBanner(buildPlatformBanner());
         return vo;
+    }
+
+    private DashboardOverviewVO.PlatformBannerVO buildPlatformBanner() {
+        DashboardOverviewVO.PlatformBannerVO b = new DashboardOverviewVO.PlatformBannerVO();
+        b.setShopName(sysConfigService.getValue(SysConfigKeys.SHOP_NAME, "暴走电商"));
+        b.setServicePhone(sysConfigService.getValue(SysConfigKeys.SERVICE_PHONE, "400-888-8888"));
+        b.setFreeShipRuleText(sysConfigService.buildPlatformHints().getFreeShipRuleText());
+        b.setSettingsPath("/setting/index");
+        return b;
     }
 
     private List<DashboardOverviewVO.StatCardVO> buildStats(DashboardDailyMetric today, DashboardDailyMetric yesterday) {
@@ -97,7 +112,7 @@ public class DashboardService {
                 quick("statistics", "交易统计", "/stats/transaction", "DataAnalysis", "#fef0f0", "#f56c6c"),
                 quick("finance", "资金看板", "/finance/index", "Wallet", "#e8f4ff", "#1a6fb5"),
                 quick("marketing", "广告管理", "/ops/advertisement", "Promotion", "#f4f4f5", "#909399"),
-                quick("settings", "个人中心", "/profile/index", "Setting", "#ecf5ff", "#409eff")
+                quick("settings", "平台设置", "/setting/index", "Setting", "#ecf5ff", "#409eff")
         );
     }
 
