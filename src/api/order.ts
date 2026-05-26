@@ -188,6 +188,21 @@ export function fetchAfterSaleList(params: {
   return get<AfterSalePageResult>('/api/order/after-sale/list', { params })
 }
 
+/** POST /api/order/after-sale/{afterSaleNo}/approve */
+export function approveAfterSale(afterSaleNo: string) {
+  return post(`/api/order/after-sale/${afterSaleNo}/approve`)
+}
+
+/** POST /api/order/after-sale/{afterSaleNo}/reject */
+export function rejectAfterSale(afterSaleNo: string, remark?: string) {
+  return post(`/api/order/after-sale/${afterSaleNo}/reject`, { remark })
+}
+
+/** POST /api/order/after-sale/{afterSaleNo}/confirm-return */
+export function confirmAfterSaleReturn(afterSaleNo: string) {
+  return post(`/api/order/after-sale/${afterSaleNo}/confirm-return`)
+}
+
 /** GET /api/order/setting/return-reason/list */
 export function fetchReturnReasonList(params: { keyword?: string; page?: number; pageSize?: number }) {
   return get<PageResult<ReturnReasonItem>>('/api/order/setting/return-reason/list', { params })

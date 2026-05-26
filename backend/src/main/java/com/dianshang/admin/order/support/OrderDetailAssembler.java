@@ -31,6 +31,15 @@ public final class OrderDetailAssembler {
             "exchange", "换货"
     );
 
+    private static final Map<String, String> AFTER_SALE_STATUS_TEXT = Map.of(
+            "platform_pending", "待平台处理",
+            "user_pending", "待用户处理",
+            "platform_confirm", "待平台确认收货",
+            "completed", "已完成",
+            "rejected", "已拒绝",
+            "closed", "已关闭"
+    );
+
     private OrderDetailAssembler() {
     }
 
@@ -68,7 +77,7 @@ public final class OrderDetailAssembler {
         vo.setPayment(buildPayment(order));
         vo.setSteps(buildSteps(order));
         vo.setAfterSale(afterSale != null ? buildAfterSale(afterSale, defaultReturnAddress) : null);
-        vo.setActions(buildActions(order));
+        vo.setActions(buildActions(order, afterSale));
         return vo;
     }
 
@@ -154,6 +163,9 @@ public final class OrderDetailAssembler {
 
     private static OrderDetailVO.AfterSaleBlockVO buildAfterSale(AfterSaleEntity a, String returnAddress) {
         OrderDetailVO.AfterSaleBlockVO block = new OrderDetailVO.AfterSaleBlockVO();
+        block.setId(a.getAfterSaleNo());
+        block.setStatus(a.getAfterSaleStatus());
+        block.setStatusText(AFTER_SALE_STATUS_TEXT.getOrDefault(a.getAfterSaleStatus(), a.getAfterSaleStatus()));
         block.setType(a.getAfterSaleType());
         block.setTypeText(AFTER_SALE_TYPE_TEXT.getOrDefault(a.getAfterSaleType(), a.getAfterSaleType()));
         block.setReason("用户申请售后");
@@ -168,7 +180,19 @@ public final class OrderDetailAssembler {
         return block;
     }
 
-    private static List<String> buildActions(OrderEntity order) {
+    private static List<String> buildActions(OrderEntity order, AfterSaleEntity afterSale) {
+        List<String> actions = new ArrayList<>(buildBaseActions(order));
+        if (afterSale != null) {
+            if ("platform_pending".equals(afterSale.getAfterSaleStatus())) {
+                actions.addAll(List.of("afterSaleApprove", "afterSaleReject"));
+            } else if ("platform_confirm".equals(afterSale.getAfterSaleStatus())) {
+                actions.add("afterSaleConfirmReturn");
+            }
+        }
+        return actions;
+    }
+
+    private static List<String> buildBaseActions(OrderEntity order) {
         List<String> actions = new ArrayList<>(List.of("contact", "export"));
         if ("pending_payment".equals(order.getOrderStatus())) {
             actions.add("close");

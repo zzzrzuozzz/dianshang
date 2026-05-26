@@ -201,6 +201,7 @@ com\dianshang\admin\inventory\repository\StockFlowRepository.class
 com\dianshang\admin\member\dto\GrowthRulesVO.class
 com\dianshang\admin\system\service\SysNoticeService.class
 com\dianshang\admin\product\entity\ProductCategory.class
+com\dianshang\admin\system\service\ProductAuditNoticeSync.class
 com\dianshang\admin\order\entity\ExpressTemplateEntity.class
 com\dianshang\admin\auth\AuthService.class
 com\dianshang\admin\content\topic\dto\TopicProductVO.class
@@ -222,6 +223,7 @@ com\dianshang\admin\config\SysConfigDataInitializer.class
 com\dianshang\admin\product\controller\ProductController.class
 com\dianshang\admin\product\entity\Product.class
 com\dianshang\admin\common\TreeNodeVO.class
+com\dianshang\admin\order\dto\AfterSaleProcessRequest.class
 com\dianshang\admin\stats\service\StatsService$ProductAgg.class
 com\dianshang\admin\content\dto\TypeOptionVO.class
 com\dianshang\admin\member\dto\GrowthBatchRequest.class
@@ -241,6 +243,7 @@ com\dianshang\admin\stats\service\StatsService$SourceAgg.class
 com\dianshang\admin\system\service\MaintenanceService.class
 com\dianshang\admin\product\dto\BatchAuditRequest.class
 com\dianshang\admin\permission\service\InviteCodeService.class
+com\dianshang\admin\system\service\WithdrawNoticeSync.class
 com\dianshang\admin\system\dto\SysConfigUpdateItem.class
 com\dianshang\admin\finance\dto\FinanceOverviewVO$WithdrawBriefVO.class
 com\dianshang\admin\stats\service\StatsService$CategoryAgg.class
@@ -322,6 +325,7 @@ com\dianshang\admin\member\entity\MemberLedgerEntity.class
 com\dianshang\admin\product\dto\AuditRequest.class
 com\dianshang\admin\system\support\SysConfigKeys.class
 com\dianshang\admin\system\entity\RegionEntity.class
+com\dianshang\admin\product\dto\CategoryTransferRequest.class
 com\dianshang\admin\order\support\OrderDetailAssembler.class
 com\dianshang\admin\stats\dto\FlowReportVO.class
 com\dianshang\admin\member\support\TagRuleMatcher.class

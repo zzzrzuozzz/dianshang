@@ -17,6 +17,7 @@ public class FileUploadService {
 
     private static final Set<String> ALLOWED = Set.of("image/jpeg", "image/png", "image/jpg");
     private static final Set<String> EXT = Set.of(".jpg", ".jpeg", ".png");
+    private static final Set<String> VIDEO_ALLOWED = Set.of("video/mp4");
 
     private final UploadProperties properties;
 
@@ -52,6 +53,37 @@ public class FileUploadService {
             return "/uploads/" + safeSub + "/" + filename;
         } catch (IOException e) {
             throw new BusinessException("图片上传失败");
+        }
+    }
+
+    public String storeVideo(MultipartFile file, String subDir) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("请选择要上传的视频");
+        }
+        long maxBytes = Math.max(properties.getMaxSizeMb(), 20) * 1024L * 1024L;
+        if (file.getSize() > maxBytes) {
+            throw new BusinessException("视频大小不能超过 " + Math.max(properties.getMaxSizeMb(), 20) + "MB");
+        }
+        String original = file.getOriginalFilename();
+        String ext = ".mp4";
+        if (StringUtils.hasText(original) && original.toLowerCase().endsWith(".mp4")) {
+            ext = ".mp4";
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !VIDEO_ALLOWED.contains(contentType.toLowerCase())) {
+            throw new BusinessException("仅支持 MP4 格式");
+        }
+
+        String safeSub = StringUtils.hasText(subDir) ? subDir.replaceAll("[^a-zA-Z0-9_-]", "") : "common";
+        Path dir = Path.of(properties.getDir()).toAbsolutePath().normalize().resolve(safeSub);
+        try {
+            Files.createDirectories(dir);
+            String filename = UUID.randomUUID().toString().replace("-", "") + ext;
+            Path target = dir.resolve(filename);
+            file.transferTo(target);
+            return "/uploads/" + safeSub + "/" + filename;
+        } catch (IOException e) {
+            throw new BusinessException("视频上传失败");
         }
     }
 

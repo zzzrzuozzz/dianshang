@@ -24,7 +24,7 @@
         </el-form-item>
 
         <el-form-item v-if="advForm.jumpType === 'TEXT'" label="详情">
-          <el-input v-model="advForm.detail" type="textarea" :rows="6" placeholder="富文本详情" style="width: 100%; max-width: 600px" />
+          <SimpleRichEditor v-model="advForm.detail" min-height="180px" />
         </el-form-item>
         <el-form-item v-else label="跳转链接" prop="jumpUrl">
           <el-input v-model="advForm.jumpUrl" placeholder="请输入跳转地址" style="width: 400px" />
@@ -66,6 +66,7 @@ import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ImageUploadGrid from '@/components/common/ImageUploadGrid.vue'
+import SimpleRichEditor from '@/components/common/SimpleRichEditor.vue'
 import AudienceTargetFields from '@/components/ops/AudienceTargetFields.vue'
 import {
   advTypeOptions,

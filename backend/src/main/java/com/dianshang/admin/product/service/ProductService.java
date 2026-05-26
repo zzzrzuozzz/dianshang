@@ -12,6 +12,7 @@ import com.dianshang.admin.product.repository.ProductRepository;
 import com.dianshang.admin.product.support.ProductFormMapper;
 import com.dianshang.admin.product.support.ProductMapper;
 import com.dianshang.admin.product.support.ProductSpecifications;
+import com.dianshang.admin.system.service.ProductAuditNoticeSync;
 import org.springframework.util.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,13 +29,16 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
     private final ProductBrandRepository brandRepository;
+    private final ProductAuditNoticeSync productAuditNoticeSync;
 
     public ProductService(ProductRepository productRepository,
                           ProductCategoryRepository categoryRepository,
-                          ProductBrandRepository brandRepository) {
+                          ProductBrandRepository brandRepository,
+                          ProductAuditNoticeSync productAuditNoticeSync) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
+        this.productAuditNoticeSync = productAuditNoticeSync;
     }
 
     public ProductDetailVO getDetail(String productNo) {
@@ -210,7 +214,13 @@ public class ProductService {
     }
 
     @Transactional
-    public void audit(String productNo, Boolean passed, String remark) {
+    public void batchAudit(List<String> ids, Boolean passed) {
+        String remark = Boolean.TRUE.equals(passed) ? "" : "批量审核未通过";
+        ids.forEach(id -> auditWithoutSync(id, passed, remark));
+        productAuditNoticeSync.syncPendingAuditNotice();
+    }
+
+    private void auditWithoutSync(String productNo, Boolean passed, String remark) {
         Product product = requireProduct(productNo);
         if (Boolean.TRUE.equals(passed)) {
             product.setAuditStatus("passed");
@@ -224,9 +234,9 @@ public class ProductService {
     }
 
     @Transactional
-    public void batchAudit(List<String> ids, Boolean passed) {
-        String remark = Boolean.TRUE.equals(passed) ? "" : "批量审核未通过";
-        ids.forEach(id -> audit(id, passed, remark));
+    public void audit(String productNo, Boolean passed, String remark) {
+        auditWithoutSync(productNo, passed, remark);
+        productAuditNoticeSync.syncPendingAuditNotice();
     }
 
     private Product requireProduct(String productNo) {

@@ -19,6 +19,10 @@
             <li><span class="label">所属角色</span><span class="value">{{ profile.roleName }}</span></li>
             <li><span class="label">创建时间</span><span class="value">{{ profile.createTime }}</span></li>
           </ul>
+          <el-button class="refresh-perm-btn" type="primary" plain :loading="permRefreshing" @click="refreshPermissions">
+            刷新菜单与权限
+          </el-button>
+          <p class="perm-hint">管理员调整角色或菜单后，点此同步侧边栏与按钮权限（无需重新登录）</p>
         </el-card>
       </el-col>
 
@@ -107,12 +111,14 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getProfile, updateProfile, updatePassword } from '@/api/profile'
+import { refreshAuthSession } from '@/api/auth'
 import { clearToken } from '@/utils/auth'
 
 const router = useRouter()
 const pageLoading = ref(false)
 const profileSubmitting = ref(false)
 const pwdSubmitting = ref(false)
+const permRefreshing = ref(false)
 const activeTab = ref('basic')
 const profileFormRef = ref()
 const pwdFormRef = ref()
@@ -196,6 +202,19 @@ const loadProfile = async () => {
     ElMessage.error('加载个人资料失败')
   } finally {
     pageLoading.value = false
+  }
+}
+
+/** 刷新 RBAC 菜单与按钮权限（无需重新登录） */
+const refreshPermissions = async () => {
+  permRefreshing.value = true
+  try {
+    await refreshAuthSession()
+    ElMessage.success('菜单与权限已刷新')
+  } catch {
+    ElMessage.error('刷新失败，请重新登录')
+  } finally {
+    permRefreshing.value = false
   }
 }
 
@@ -311,6 +330,19 @@ onMounted(loadProfile)
 .static-info .value {
   color: #303133;
   font-weight: 500;
+}
+
+.refresh-perm-btn {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.perm-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .profile-form {

@@ -192,7 +192,8 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Top, Bottom, Delete, Select } from '@element-plus/icons-vue'
-import { auditStatusMap } from '@/mock/product'
+import { auditStatusMap } from '@/constants/product'
+import { triggerNoticeRefresh } from '@/utils/noticeHelpers'
 import {
   auditProduct,
   batchAuditProduct,
@@ -347,7 +348,7 @@ const handleBatchDelete = () => {
 }
 
 const handleView = (row) => {
-  ElMessage.info(`查看商品 ${row.id}`)
+  router.push({ path: '/product/add', query: { id: row.id } })
 }
 
 const handleAudit = (row) => {
@@ -360,12 +361,14 @@ const handleAudit = (row) => {
     .then(async () => {
       await auditProduct(row.id, true)
       ElMessage.success('审核通过')
+      triggerNoticeRefresh()
       fetchData()
     })
     .catch(async (action) => {
       if (action === 'cancel') {
         await auditProduct(row.id, false, '审核未通过')
         ElMessage.warning('已驳回')
+        triggerNoticeRefresh()
         fetchData()
       }
     })
@@ -383,12 +386,14 @@ const handleBatchAudit = () => {
     .then(async () => {
       await batchAuditProduct(ids, true)
       ElMessage.success('批量审核通过')
+      triggerNoticeRefresh()
       fetchData()
     })
     .catch(async (action) => {
       if (action === 'cancel') {
         await batchAuditProduct(ids, false)
         ElMessage.warning('已批量驳回')
+        triggerNoticeRefresh()
         fetchData()
       }
     })

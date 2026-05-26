@@ -79,7 +79,7 @@
 
         <el-table-column label="售后状态" width="110" align="center">
           <template #default="{ row }">
-            <el-tag size="small" type="warning">{{ afterSaleStatusLabel[row.afterSaleStatus] }}</el-tag>
+            <el-tag size="small" type="warning">{{ afterSaleStatusLabelMap[row.afterSaleStatus] }}</el-tag>
           </template>
         </el-table-column>
 
@@ -102,9 +102,22 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="80" fixed="right" align="center">
+        <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleView(row)">查看</el-button>
+            <template v-if="row.afterSaleStatus === 'platform_pending'">
+              <el-button v-perm="'order:refund'" type="success" link @click="handleApprove(row)">同意</el-button>
+              <el-button v-perm="'order:refund'" type="danger" link @click="handleReject(row)">拒绝</el-button>
+            </template>
+            <el-button
+              v-if="row.afterSaleStatus === 'platform_confirm'"
+              v-perm="'order:refund'"
+              type="warning"
+              link
+              @click="handleConfirmReturn(row)"
+            >
+              确认收货
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -131,8 +144,19 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { orderStatusLabel, shipStatusLabel, afterSaleTypeLabel } from '@/mock/order'
-import { fetchAfterSaleList as loadAfterSaleList } from '@/api/order'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  afterSaleStatusLabel,
+  afterSaleTypeLabel,
+  orderStatusLabel,
+  shipStatusLabel,
+} from '@/constants/order'
+import {
+  approveAfterSale,
+  confirmAfterSaleReturn,
+  fetchAfterSaleList as loadAfterSaleList,
+  rejectAfterSale,
+} from '@/api/order'
 
 const router = useRouter()
 const loading = ref(false)
@@ -140,14 +164,7 @@ const activeTab = ref('platform_pending')
 const tableData = ref([])
 const statusTabs = ref([])
 
-const afterSaleStatusLabel = {
-  platform_pending: '待平台处理',
-  user_pending: '待用户处理',
-  platform_confirm: '待平台确认收货',
-  completed: '已完成',
-  rejected: '已拒绝',
-  closed: '已关闭',
-}
+const afterSaleStatusLabelMap = afterSaleStatusLabel
 
 const searchForm = reactive({
   product: '',
@@ -219,6 +236,40 @@ const handleReset = () => {
 
 const handleView = (row) => {
   router.push({ path: `/order/detail/${row.orderId}`, query: { status: 'after_sale' } })
+}
+
+const handleApprove = (row) => {
+  ElMessageBox.confirm(`确定同意售后单 ${row.id} 吗？仅退款类型将直接完成退款。`, '同意售后', { type: 'warning' })
+    .then(async () => {
+      await approveAfterSale(row.id)
+      ElMessage.success('已同意售后申请')
+      fetchAfterSaleList()
+    })
+    .catch(() => {})
+}
+
+const handleReject = (row) => {
+  ElMessageBox.prompt('请输入拒绝原因（可选）', '拒绝售后', {
+    confirmButtonText: '确定拒绝',
+    cancelButtonText: '取消',
+    inputPlaceholder: '拒绝原因',
+  })
+    .then(async ({ value }) => {
+      await rejectAfterSale(row.id, value || undefined)
+      ElMessage.success('已拒绝售后申请')
+      fetchAfterSaleList()
+    })
+    .catch(() => {})
+}
+
+const handleConfirmReturn = (row) => {
+  ElMessageBox.confirm(`确认已收到退货并完成退款吗？`, '确认收货', { type: 'warning' })
+    .then(async () => {
+      await confirmAfterSaleReturn(row.id)
+      ElMessage.success('已确认收货并完成退款')
+      fetchAfterSaleList()
+    })
+    .catch(() => {})
 }
 
 onMounted(fetchAfterSaleList)

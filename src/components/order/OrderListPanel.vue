@@ -234,7 +234,7 @@ import { reactive, ref, onMounted } from 'vue'
 import ExpressWaybillDialog from '@/components/express/ExpressWaybillDialog.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { orderStatusLabel, shipStatusLabel } from '@/mock/order'
+import { orderStatusLabel, shipStatusLabel } from '@/constants/order'
 import {
   batchConfirmOrders,
   confirmOrder,

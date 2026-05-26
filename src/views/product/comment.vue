@@ -50,7 +50,9 @@
             :label="`${tab.label} (${tab.count})`"
           />
         </el-tabs>
-        <el-button type="danger" :icon="Delete">批量删除</el-button>
+        <el-button type="danger" :icon="Delete" :disabled="!selected.length" @click="handleBatchDelete">
+          批量删除
+        </el-button>
       </div>
     </el-card>
 
@@ -153,6 +155,7 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import {
@@ -162,6 +165,8 @@ import {
   fetchCommentList,
   fetchCommentOverview,
 } from '@/api/product'
+
+const router = useRouter()
 
 const loading = ref(false)
 const activeTab = ref('all')
@@ -224,10 +229,38 @@ const handleReset = () => {
 }
 
 const handleAction = (key) => {
-  ElMessage.info(`跳转到 ${key} 处理`)
+  if (key === 'badReply') {
+    activeTab.value = 'bad'
+  } else if (key === 'neutralReply') {
+    activeTab.value = 'neutral'
+  } else if (key === 'feature') {
+    activeTab.value = 'all'
+    ElMessage.info('请在下方列表中点击「加精」处理待加精评论')
+    return
+  }
+  pagination.page = 1
+  fetchTableData()
 }
 
-const handleView = (row) => ElMessage.info(`查看商品 ${row.id} 的评价`)
+const handleView = (row) => {
+  router.push({ path: '/product/add', query: { id: row.id } })
+}
+
+const handleBatchDelete = () => {
+  if (!selected.value.length) {
+    ElMessage.warning('请先选择要删除的评价')
+    return
+  }
+  ElMessageBox.confirm(`确定删除选中的 ${selected.value.length} 条评价吗？`, '提示', { type: 'warning' })
+    .then(async () => {
+      await Promise.all(selected.value.map((row) => deleteComment(row.id)))
+      ElMessage.success('批量删除成功')
+      selected.value = []
+      fetchTableData()
+      fetchDashboardData()
+    })
+    .catch(() => {})
+}
 const handleFeature = async (row) => {
   await featureComment(row.id)
   ElMessage.success(`商品 ${row.id} 已加精`)

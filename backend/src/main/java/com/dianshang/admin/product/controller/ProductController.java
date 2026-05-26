@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/product")
@@ -180,6 +181,13 @@ public class ProductController {
     public ApiResponse<Void> categoryVisible(@PathVariable String id, @RequestBody VisibleRequest request) {
         categoryService.updateVisible(id, Boolean.TRUE.equals(request.getVisible()));
         return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/category/transfer")
+    public ApiResponse<Map<String, Object>> transferCategoryProducts(
+            @Valid @RequestBody CategoryTransferRequest request) {
+        int moved = categoryService.transferProducts(request.getFromCategoryCode(), request.getToCategoryCode());
+        return ApiResponse.ok(Map.of("moved", moved));
     }
 
     @GetMapping("/brand/list")

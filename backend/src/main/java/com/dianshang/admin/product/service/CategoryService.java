@@ -5,8 +5,10 @@ import com.dianshang.admin.common.PageResult;
 import com.dianshang.admin.common.TreeNodeVO;
 import com.dianshang.admin.product.dto.CategoryOptionVO;
 import com.dianshang.admin.product.dto.CategoryVO;
+import com.dianshang.admin.product.entity.Product;
 import com.dianshang.admin.product.entity.ProductCategory;
 import com.dianshang.admin.product.repository.ProductCategoryRepository;
+import com.dianshang.admin.product.repository.ProductRepository;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,9 +29,11 @@ public class CategoryService {
     private static final String[] LEVEL_LABELS = {"", "一级", "二级", "三级", "四级"};
 
     private final ProductCategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
-    public CategoryService(ProductCategoryRepository categoryRepository) {
+    public CategoryService(ProductCategoryRepository categoryRepository, ProductRepository productRepository) {
         this.categoryRepository = categoryRepository;
+        this.productRepository = productRepository;
     }
 
     public List<TreeNodeVO> tree() {
@@ -125,6 +129,29 @@ public class CategoryService {
         ProductCategory entity = requireByCode(code);
         entity.setVisible(visible);
         categoryRepository.save(entity);
+    }
+
+    @Transactional
+    public int transferProducts(String fromCode, String toCode) {
+        if (fromCode.equals(toCode)) {
+            throw new BusinessException("源分类与目标分类不能相同");
+        }
+        ProductCategory from = requireByCode(fromCode);
+        ProductCategory to = requireByCode(toCode);
+        List<Product> products = productRepository.findByCategoryCodeAndDeletedFalse(fromCode);
+        for (Product p : products) {
+            p.setCategoryCode(toCode);
+            productRepository.save(p);
+        }
+        refreshProductCount(from);
+        refreshProductCount(to);
+        return products.size();
+    }
+
+    private void refreshProductCount(ProductCategory category) {
+        long count = productRepository.countByDeletedFalseAndCategoryCode(category.getCode());
+        category.setProductCount((int) count);
+        categoryRepository.save(category);
     }
 
     private ProductCategory requireByCode(String code) {

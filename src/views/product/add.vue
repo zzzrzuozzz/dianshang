@@ -65,10 +65,22 @@
           </el-form-item>
 
           <el-form-item label="运费模板" prop="shipping">
-            <el-select v-model="form.shipping" placeholder="请选择运费模板" style="width: 100%">
-              <el-option label="包邮模板" value="free" />
-              <el-option label="按重量计费" value="weight" />
+            <el-select
+              v-model="form.shipping"
+              placeholder="请选择运费模板"
+              clearable
+              style="width: 100%"
+            >
+              <el-option
+                v-for="opt in shippingOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
             </el-select>
+            <p v-if="!shippingOptions.length" class="form-hint">
+              暂无模板，请先在「订单 → 订单设置 → 快递单模板」中添加
+            </p>
           </el-form-item>
 
           <el-form-item label="配送区域">
@@ -160,51 +172,22 @@
         <el-card shadow="never" class="form-card media-card">
           <div class="upload-section">
             <h4 class="section-title">商品主图</h4>
-            <div class="upload-grid">
-              <div v-for="(img, idx) in form.mainImages" :key="idx" class="upload-item has-image">
-                <el-image :src="img" fit="cover" class="upload-preview" />
-                <span class="upload-remove" @click="removeMainImage(idx)">×</span>
-              </div>
-              <div
-                v-if="form.mainImages.length < 5"
-                class="upload-item upload-trigger"
-                @click="mockUpload('mainImages')"
-              >
-                <el-icon :size="28"><Plus /></el-icon>
-                <span>上传</span>
-              </div>
-            </div>
-            <p class="form-hint">只能上传 jpg, png 格式，最多 5 张</p>
+            <ImageUploadGrid
+              v-model="form.mainImages"
+              :max="5"
+              biz="product"
+              hint="只能上传 jpg、png 格式，最多 5 张"
+            />
           </div>
 
           <div class="upload-section">
             <h4 class="section-title">白底图</h4>
-            <div class="upload-grid">
-              <div v-if="form.whiteImage" class="upload-item has-image">
-                <el-image :src="form.whiteImage" fit="cover" class="upload-preview" />
-                <span class="upload-remove" @click="form.whiteImage = ''">×</span>
-              </div>
-              <div v-else class="upload-item upload-trigger" @click="mockUpload('whiteImage')">
-                <el-icon :size="28"><Plus /></el-icon>
-                <span>上传</span>
-              </div>
-            </div>
+            <SingleImageUpload v-model="form.whiteImage" biz="product" />
           </div>
 
           <div class="upload-section">
             <h4 class="section-title">视频</h4>
-            <div class="upload-grid">
-              <div v-if="form.video" class="upload-item has-image">
-                <div class="video-placeholder">
-                  <el-icon :size="32"><VideoPlay /></el-icon>
-                </div>
-                <span class="upload-remove" @click="form.video = ''">×</span>
-              </div>
-              <div v-else class="upload-item upload-trigger" @click="mockUpload('video')">
-                <el-icon :size="28"><Plus /></el-icon>
-                <span>上传</span>
-              </div>
-            </div>
+            <VideoUpload v-model="form.video" biz="product" />
           </div>
 
           <div class="upload-section editor-section">
@@ -219,9 +202,54 @@
         </el-card>
       </div>
 
-      <!-- Step 2：属性（占位，后续扩展多规格） -->
+      <!-- Step 2：多规格 SKU -->
       <el-card v-show="currentStep === 1" shadow="never" class="form-card step-card">
-        <el-empty description="多规格 SKU 将在后续版本支持，当前使用单规格库存（上一步已填写）" />
+        <div class="sku-toolbar">
+          <p class="form-hint">主规格与第一步信息同步；可添加扩展规格（如颜色、尺码），保存后同步至库存。</p>
+          <el-button type="primary" plain @click="addSkuRow">添加规格</el-button>
+        </div>
+        <el-table :data="form.skuRows" border stripe class="sku-table">
+          <el-table-column label="类型" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.isPrimary ? 'primary' : 'info'" size="small">
+                {{ row.isPrimary ? '主规格' : '扩展' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="规格名称" min-width="140">
+            <template #default="{ row }">
+              <el-input v-model="row.skuName" placeholder="如：红色 / XL" maxlength="30" />
+            </template>
+          </el-table-column>
+          <el-table-column label="货号" min-width="140">
+            <template #default="{ row }">
+              <el-input v-model="row.skuCode" placeholder="留空自动生成" maxlength="30" />
+            </template>
+          </el-table-column>
+          <el-table-column label="库存" width="120">
+            <template #default="{ row }">
+              <el-input v-model="row.stock" placeholder="0" />
+            </template>
+          </el-table-column>
+          <el-table-column label="预警值" width="120">
+            <template #default="{ row }">
+              <el-input v-model="row.stockWarning" placeholder="0" />
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="80" align="center">
+            <template #default="{ $index, row }">
+              <el-button
+                v-if="!row.isPrimary"
+                type="danger"
+                link
+                @click="removeSkuRow($index)"
+              >
+                删除
+              </el-button>
+              <span v-else class="text-muted">—</span>
+            </template>
+          </el-table-column>
+        </el-table>
       </el-card>
 
       <!-- Step 3：确认 -->
@@ -238,6 +266,7 @@
             {{ form.deliveryRegions?.length ? `已选 ${form.deliveryRegions.length} 个地区` : '全国' }}
           </el-descriptions-item>
           <el-descriptions-item label="主图数量">{{ form.mainImages.length }} 张</el-descriptions-item>
+          <el-descriptions-item label="规格数量">{{ form.skuRows.length }} 个</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
@@ -260,8 +289,10 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { Plus, VideoPlay } from '@element-plus/icons-vue'
 import AreaCascader from '@/components/AreaCascader/index.vue'
+import ImageUploadGrid from '@/components/common/ImageUploadGrid.vue'
+import SingleImageUpload from '@/components/common/SingleImageUpload.vue'
+import VideoUpload from '@/components/common/VideoUpload.vue'
 import { useProductEditor } from '@/composables/useProductEditor'
 
 const {
@@ -273,6 +304,7 @@ const {
   submitting,
   categoryOptions,
   brandOptions,
+  shippingOptions,
   isEdit,
   pageTitle,
   productId,
@@ -280,8 +312,8 @@ const {
   nextStep,
   prevStep,
   submit,
-  mockUpload,
-  removeMainImage,
+  addSkuRow,
+  removeSkuRow,
 } = useProductEditor()
 
 const categoryLabel = computed(
@@ -376,69 +408,20 @@ onMounted(init)
   color: #303133;
 }
 
-.upload-grid {
+.sku-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.upload-item {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  border: 1px dashed #dcdfe6;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.upload-trigger {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: #909399;
-  font-size: 12px;
-  cursor: pointer;
-  background: #fafafa;
-  transition: border-color 0.2s;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.upload-trigger:hover {
-  border-color: #409eff;
-  color: #409eff;
-}
-
-.upload-preview {
+.sku-table {
   width: 100%;
-  height: 100%;
 }
 
-.upload-remove {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f56c6c;
-  color: #fff;
-  border-radius: 50%;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.video-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  background: #303133;
-  color: #fff;
+.text-muted {
+  color: #c0c4cc;
 }
 
 .form-footer {

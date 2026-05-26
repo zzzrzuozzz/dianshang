@@ -82,6 +82,9 @@ public class OrderDetailVO {
 
     @Data
     public static class AfterSaleBlockVO {
+        private String id;
+        private String status;
+        private String statusText;
         private String type;
         private String typeText;
         private String reason;

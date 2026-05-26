@@ -88,6 +88,31 @@
         </el-form-item>
       </el-form>
     </el-card>
+
+    <el-card shadow="never" class="panel-card">
+      <template #header>
+        <div class="card-head">
+          <span class="card-title">扩展参数（KV）</span>
+          <span class="card-sub">除上方平台参数外的键值配置，保存后立即生效</span>
+        </div>
+      </template>
+      <el-table v-loading="kvLoading" :data="extraConfigs" border stripe empty-text="暂无扩展参数">
+        <el-table-column prop="configKey" label="参数键" min-width="180" />
+        <el-table-column label="参数值" min-width="240">
+          <template #default="{ row }">
+            <el-input v-model="row.configValue" placeholder="参数值" />
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="updateTime" label="更新时间" width="170" />
+      </el-table>
+      <div class="kv-actions">
+        <el-button type="primary" :loading="kvSubmitting" :disabled="!extraConfigs.length" @click="saveExtraConfigs">
+          保存扩展参数
+        </el-button>
+        <el-button @click="loadExtraConfigs">刷新列表</el-button>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -96,7 +121,7 @@ import { reactive, ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Location, Tools, List } from '@element-plus/icons-vue'
-import { fetchPlatformConfig, savePlatformConfig } from '@/api/system'
+import { fetchPlatformConfig, savePlatformConfig, fetchSysConfig, submitSysConfig } from '@/api/system'
 import { refreshPlatformConfig } from '@/composables/usePlatformConfig'
 
 const router = useRouter()
@@ -104,7 +129,18 @@ const phonePattern = /^(1[3-9]\d{9}|0\d{2,3}-?\d{7,8}|400-?\d{3}-?\d{4})$/
 
 const loading = ref(false)
 const submitting = ref(false)
+const kvLoading = ref(false)
+const kvSubmitting = ref(false)
 const formRef = ref(null)
+const extraConfigs = ref([])
+
+const PLATFORM_KEYS = new Set([
+  'shop_name',
+  'service_phone',
+  'free_ship_threshold',
+  'unpaid_close_minutes',
+  'stock_deduct_strategy',
+])
 
 const form = reactive({
   shopName: '',
@@ -170,8 +206,36 @@ const handleSubmit = async () => {
   }
 }
 
-onMounted(loadConfig)
-onActivated(loadConfig)
+onMounted(() => {
+  loadConfig()
+  loadExtraConfigs()
+})
+onActivated(() => {
+  loadConfig()
+  loadExtraConfigs()
+})
+
+const loadExtraConfigs = async () => {
+  kvLoading.value = true
+  try {
+    const list = await fetchSysConfig()
+    extraConfigs.value = (list || []).filter((item) => !PLATFORM_KEYS.has(item.configKey))
+  } finally {
+    kvLoading.value = false
+  }
+}
+
+const saveExtraConfigs = async () => {
+  kvSubmitting.value = true
+  try {
+    await submitSysConfig(extraConfigs.value)
+    ElMessage.success('扩展参数已保存')
+    await refreshPlatformConfig()
+    await loadExtraConfigs()
+  } finally {
+    kvSubmitting.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -236,5 +300,10 @@ onActivated(loadConfig)
 .unit {
   font-size: 14px;
   color: #606266;
+}
+.kv-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
 }
 </style>

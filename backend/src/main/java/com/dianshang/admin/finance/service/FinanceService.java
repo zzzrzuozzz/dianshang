@@ -16,6 +16,7 @@ import com.dianshang.admin.member.repository.MemberRepository;
 import com.dianshang.admin.order.entity.OrderEntity;
 import com.dianshang.admin.order.repository.OrderRepository;
 import com.dianshang.admin.permission.support.PermissionSecurityHelper;
+import com.dianshang.admin.system.service.WithdrawNoticeSync;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -47,6 +48,7 @@ public class FinanceService {
     private final FinanceLedgerService ledgerService;
     private final DashboardFinanceSync dashboardFinanceSync;
     private final PermissionSecurityHelper permissionSecurityHelper;
+    private final WithdrawNoticeSync withdrawNoticeSync;
 
     public FinanceService(FinTransactionRecordRepository transactionRepository,
                          FinWithdrawApplyRepository withdrawRepository,
@@ -54,7 +56,8 @@ public class FinanceService {
                          OrderRepository orderRepository,
                          FinanceLedgerService ledgerService,
                          DashboardFinanceSync dashboardFinanceSync,
-                         PermissionSecurityHelper permissionSecurityHelper) {
+                         PermissionSecurityHelper permissionSecurityHelper,
+                         WithdrawNoticeSync withdrawNoticeSync) {
         this.transactionRepository = transactionRepository;
         this.withdrawRepository = withdrawRepository;
         this.memberRepository = memberRepository;
@@ -62,6 +65,7 @@ public class FinanceService {
         this.ledgerService = ledgerService;
         this.dashboardFinanceSync = dashboardFinanceSync;
         this.permissionSecurityHelper = permissionSecurityHelper;
+        this.withdrawNoticeSync = withdrawNoticeSync;
     }
 
     public Map<String, Object> reconcileGlobal() {
@@ -186,6 +190,7 @@ public class FinanceService {
             withdrawRepository.save(apply);
             dashboardFinanceSync.refreshPendingTasks();
         }
+        withdrawNoticeSync.syncWithdrawAuditNotice();
     }
 
     @Transactional

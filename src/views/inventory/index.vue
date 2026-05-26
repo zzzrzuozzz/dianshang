@@ -173,6 +173,27 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="batchDialog.visible" title="批量调整库存" width="640px" destroy-on-close>
+      <p class="batch-hint">将批量更新各商品主规格库存，扩展 SKU 保持不变。</p>
+      <el-table :data="batchDialog.rows" border max-height="360">
+        <el-table-column prop="name" label="商品" min-width="160" show-overflow-tooltip />
+        <el-table-column label="当前库存" width="140" align="center">
+          <template #default="{ row }">
+            <el-input-number v-model="row.stock" :min="0" size="small" />
+          </template>
+        </el-table-column>
+        <el-table-column label="预警值" width="140" align="center">
+          <template #default="{ row }">
+            <el-input-number v-model="row.warningStock" :min="0" size="small" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="batchDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="batchDialog.saving" @click="handleBatchSave">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -182,7 +203,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchCategoryTree } from '@/api/product'
 import { fetchInventoryList as loadInventoryList, updateInventory } from '@/api/inventory'
-import { supplierOptions } from '@/mock/inventory'
+import { supplierOptions } from '@/constants/inventory'
 
 const router = useRouter()
 const loading = ref(false)
@@ -215,6 +236,12 @@ const stockDialog = reactive({
   saving: false,
   row: null,
   skus: [],
+})
+
+const batchDialog = reactive({
+  visible: false,
+  saving: false,
+  rows: [],
 })
 
 const mapCategoryTree = (nodes) =>
@@ -291,7 +318,36 @@ const handleBatchAdjust = () => {
     openStockDialog(selectedRows.value[0])
     return
   }
-  ElMessage.info(`已选择 ${selectedRows.value.length} 个商品，请逐个调整库存`)
+  batchDialog.rows = selectedRows.value.map((row) => {
+    const primary = row.skus?.[0]
+    return {
+      goodsId: row.goodsId,
+      name: row.name,
+      stock: primary?.actualStock ?? row.actualStock ?? 0,
+      warningStock: primary?.warningStock ?? row.warningStock ?? 0,
+      skus: (row.skus || []).map((s) => ({ ...s })),
+    }
+  })
+  batchDialog.visible = true
+}
+
+const handleBatchSave = async () => {
+  batchDialog.saving = true
+  try {
+    await Promise.all(
+      batchDialog.rows.map((row) => {
+        const skus = row.skus.map((s, idx) =>
+          idx === 0 ? { ...s, actualStock: row.stock, warningStock: row.warningStock } : { ...s },
+        )
+        return updateInventory({ goodsId: row.goodsId, skus })
+      }),
+    )
+    ElMessage.success('批量库存更新成功')
+    batchDialog.visible = false
+    fetchInventoryList()
+  } finally {
+    batchDialog.saving = false
+  }
 }
 
 const openStockDialog = (row) => {
@@ -413,6 +469,12 @@ onMounted(async () => {
 .page-info {
   font-size: 13px;
   color: #606266;
+}
+
+.batch-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #909399;
 }
 
 .dialog-product {

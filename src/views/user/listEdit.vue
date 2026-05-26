@@ -12,16 +12,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="用户头像">
-          <div class="avatar-upload">
-            <div class="upload-trigger" @click="mockUpload">
-              <el-icon :size="28"><Plus /></el-icon>
-              <span>上传照片</span>
-            </div>
-            <div v-if="form.avatar" class="upload-preview">
-              <el-image :src="form.avatar" fit="cover" class="preview-img" />
-              <span class="remove-btn" @click="form.avatar = ''">×</span>
-            </div>
-          </div>
+          <SingleImageUpload v-model="form.avatar" biz="user" add-label="上传照片" />
           <p class="form-hint">只支持 jpg png 格式，最多1张</p>
         </el-form-item>
         <el-form-item label="性别">
@@ -61,8 +52,8 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 import AreaCascader from '@/components/AreaCascader/index.vue'
+import SingleImageUpload from '@/components/common/SingleImageUpload.vue'
 import { fetchLevelOptions, fetchUserDetail, updateUser } from '@/api/user'
 
 const route = useRoute()
@@ -88,8 +79,6 @@ const rules = {
   level: [{ required: true, message: '请选择会员等级', trigger: 'change' }],
 }
 
-const mockThumb = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-
 const loadUser = async () => {
   loading.value = true
   try {
@@ -111,11 +100,6 @@ const loadUser = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const mockUpload = () => {
-  form.avatar = mockThumb
-  ElMessage.success('上传成功')
 }
 
 const submitUserEdit = async () => {

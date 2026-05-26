@@ -27,8 +27,10 @@
           <el-tab-pane label="已禁用" name="disabled" />
         </el-tabs>
         <div class="toolbar-actions">
-          <el-button type="primary" :icon="Plus">添加品牌</el-button>
-          <el-button type="danger" :icon="Delete">批量删除</el-button>
+          <el-button type="primary" :icon="Plus" @click="openCreate">添加品牌</el-button>
+          <el-button type="danger" :icon="Delete" :disabled="!selected.length" @click="handleBatchDelete">
+            批量删除
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -80,19 +82,68 @@
         />
       </div>
     </el-card>
+
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px" destroy-on-close>
+      <el-form ref="dialogFormRef" :model="dialogForm" :rules="dialogRules" label-width="90px">
+        <el-form-item label="品牌名称" prop="name">
+          <el-input v-model="dialogForm.name" placeholder="请输入品牌名称" maxlength="50" @input="syncInitial" />
+        </el-form-item>
+        <el-form-item label="首字母">
+          <el-input v-model="dialogForm.initial" placeholder="自动或手动填写" maxlength="5" />
+        </el-form-item>
+        <el-form-item label="供应商">
+          <el-input v-model="dialogForm.supplier" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input v-model.number="dialogForm.sort" placeholder="数字越小越靠前" />
+        </el-form-item>
+        <el-form-item label="是否显示">
+          <el-switch v-model="dialogForm.visible" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="dialogSaving" @click="submitDialog">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
-import { deleteBrand, fetchBrandList, updateBrandVisible } from '@/api/product'
+import {
+  createBrand,
+  deleteBrand,
+  fetchBrandList,
+  updateBrand,
+  updateBrandVisible,
+} from '@/api/product'
 
 const loading = ref(false)
 const activeTab = ref('all')
 const selected = ref([])
 const tableData = ref([])
+const dialogVisible = ref(false)
+const dialogSaving = ref(false)
+const dialogMode = ref('create')
+const dialogFormRef = ref(null)
+
+const dialogForm = reactive({
+  id: '',
+  name: '',
+  initial: '',
+  supplier: '',
+  sort: 0,
+  visible: true,
+})
+
+const dialogRules = {
+  name: [{ required: true, message: '请输入品牌名称', trigger: 'blur' }],
+}
+
+const dialogTitle = computed(() => (dialogMode.value === 'create' ? '添加品牌' : '编辑品牌'))
 
 const searchForm = reactive({ keyword: '' })
 const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
@@ -129,6 +180,56 @@ const handleReset = () => {
   fetchData()
 }
 
+const syncInitial = () => {
+  if (!dialogForm.initial && dialogForm.name) {
+    dialogForm.initial = dialogForm.name.trim().charAt(0).toUpperCase()
+  }
+}
+
+const openCreate = () => {
+  dialogMode.value = 'create'
+  Object.assign(dialogForm, { id: '', name: '', initial: '', supplier: '', sort: 0, visible: true })
+  dialogVisible.value = true
+}
+
+const submitDialog = async () => {
+  const valid = await dialogFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+  dialogSaving.value = true
+  try {
+    const payload = {
+      name: dialogForm.name.trim(),
+      initial: dialogForm.initial || dialogForm.name.trim().charAt(0).toUpperCase(),
+      supplier: dialogForm.supplier || undefined,
+      sort: dialogForm.sort ?? 0,
+      visible: dialogForm.visible,
+    }
+    if (dialogMode.value === 'create') {
+      await createBrand(payload)
+      ElMessage.success('品牌已添加')
+    } else {
+      await updateBrand(dialogForm.id, payload)
+      ElMessage.success('品牌已更新')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } finally {
+    dialogSaving.value = false
+  }
+}
+
+const handleBatchDelete = () => {
+  if (!selected.value.length) return
+  ElMessageBox.confirm(`确定删除选中的 ${selected.value.length} 个品牌吗？`, '提示', { type: 'warning' })
+    .then(async () => {
+      await Promise.all(selected.value.map((row) => deleteBrand(row.id)))
+      ElMessage.success('批量删除成功')
+      selected.value = []
+      fetchData()
+    })
+    .catch(() => {})
+}
+
 const toggleVisible = async (row) => {
   const next = !row.visible
   await updateBrandVisible(row.id, next)
@@ -136,7 +237,18 @@ const toggleVisible = async (row) => {
   ElMessage.success(next ? '已显示' : '已隐藏')
 }
 
-const handleEdit = (row) => ElMessage.info(`编辑品牌 ${row.name}`)
+const handleEdit = (row) => {
+  dialogMode.value = 'edit'
+  Object.assign(dialogForm, {
+    id: row.id,
+    name: row.name,
+    initial: row.initial || '',
+    supplier: row.supplier || '',
+    sort: row.sort ?? 0,
+    visible: row.visible,
+  })
+  dialogVisible.value = true
+}
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除品牌 ${row.name} 吗？`, '提示', { type: 'warning' })
     .then(async () => {

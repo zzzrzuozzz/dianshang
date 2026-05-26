@@ -22,6 +22,36 @@
             重新发货
           </el-button>
           <el-button v-if="hasAction('close')" type="danger" size="small">关闭订单</el-button>
+          <el-button
+            v-if="hasAction('afterSaleApprove')"
+            v-perm="'order:refund'"
+            type="success"
+            size="small"
+            :loading="afterSaleLoading"
+            @click="handleAfterSaleApprove"
+          >
+            同意售后
+          </el-button>
+          <el-button
+            v-if="hasAction('afterSaleReject')"
+            v-perm="'order:refund'"
+            type="danger"
+            size="small"
+            :loading="afterSaleLoading"
+            @click="handleAfterSaleReject"
+          >
+            拒绝售后
+          </el-button>
+          <el-button
+            v-if="hasAction('afterSaleConfirmReturn')"
+            v-perm="'order:refund'"
+            type="warning"
+            size="small"
+            :loading="afterSaleLoading"
+            @click="handleAfterSaleConfirmReturn"
+          >
+            确认退货收货
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -105,7 +135,41 @@
       <template #header>
         <div class="section-header">
           <span class="section-title">售后信息</span>
-          <el-button type="primary" size="small">处理售后</el-button>
+          <div class="after-sale-actions">
+            <el-tag v-if="orderInfo.afterSale?.statusText" type="warning" size="small">
+              {{ orderInfo.afterSale.statusText }}
+            </el-tag>
+            <el-button
+              v-if="hasAction('afterSaleApprove')"
+              v-perm="'order:refund'"
+              type="success"
+              size="small"
+              :loading="afterSaleLoading"
+              @click="handleAfterSaleApprove"
+            >
+              同意
+            </el-button>
+            <el-button
+              v-if="hasAction('afterSaleReject')"
+              v-perm="'order:refund'"
+              type="danger"
+              size="small"
+              :loading="afterSaleLoading"
+              @click="handleAfterSaleReject"
+            >
+              拒绝
+            </el-button>
+            <el-button
+              v-if="hasAction('afterSaleConfirmReturn')"
+              v-perm="'order:refund'"
+              type="warning"
+              size="small"
+              :loading="afterSaleLoading"
+              @click="handleAfterSaleConfirmReturn"
+            >
+              确认收货
+            </el-button>
+          </div>
         </div>
       </template>
       <el-descriptions :column="2" border>
@@ -283,12 +347,19 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchOrderDetail, reissueOrder } from '@/api/order'
+import {
+  approveAfterSale,
+  confirmAfterSaleReturn,
+  fetchOrderDetail,
+  rejectAfterSale,
+  reissueOrder,
+} from '@/api/order'
 import ExpressWaybillDialog from '@/components/express/ExpressWaybillDialog.vue'
 
 const route = useRoute()
 const loading = ref(false)
 const reissueLoading = ref(false)
+const afterSaleLoading = ref(false)
 const expressDialogRef = ref(null)
 
 const openExpressPrint = () => {
@@ -402,10 +473,67 @@ const getOrderDetail = async (orderId) => {
       steps: data.steps || [],
       actions: data.actions || [],
       payment: data.payment || orderInfo.payment,
+      afterSale: data.afterSale || null,
     })
   } finally {
     loading.value = false
   }
+}
+
+const afterSaleNo = () => orderInfo.afterSale?.id
+
+const handleAfterSaleApprove = () => {
+  const no = afterSaleNo()
+  if (!no) return
+  ElMessageBox.confirm('确定同意该售后申请吗？仅退款类型将直接完成退款。', '同意售后', { type: 'warning' })
+    .then(async () => {
+      afterSaleLoading.value = true
+      try {
+        await approveAfterSale(no)
+        ElMessage.success('已同意售后申请')
+        await getOrderDetail(orderInfo.id)
+      } finally {
+        afterSaleLoading.value = false
+      }
+    })
+    .catch(() => {})
+}
+
+const handleAfterSaleReject = () => {
+  const no = afterSaleNo()
+  if (!no) return
+  ElMessageBox.prompt('请输入拒绝原因（可选）', '拒绝售后', {
+    confirmButtonText: '确定拒绝',
+    cancelButtonText: '取消',
+  })
+    .then(async ({ value }) => {
+      afterSaleLoading.value = true
+      try {
+        await rejectAfterSale(no, value || undefined)
+        ElMessage.success('已拒绝售后申请')
+        await getOrderDetail(orderInfo.id)
+      } finally {
+        afterSaleLoading.value = false
+      }
+    })
+    .catch(() => {})
+}
+
+const handleAfterSaleConfirmReturn = () => {
+  const no = afterSaleNo()
+  if (!no) return
+  ElMessageBox.confirm('确认已收到退货并完成退款吗？', '确认收货', { type: 'warning' })
+    .then(async () => {
+      afterSaleLoading.value = true
+      try {
+        await confirmAfterSaleReturn(no)
+        ElMessage.success('已确认收货并完成退款')
+        await getOrderDetail(orderInfo.id)
+      } finally {
+        afterSaleLoading.value = false
+      }
+    })
+    .catch(() => {})
 }
 
 onMounted(() => {
@@ -447,6 +575,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.after-sale-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .section-title {

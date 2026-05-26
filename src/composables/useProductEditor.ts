@@ -8,10 +8,14 @@ import {
   fetchProductDetail,
   updateProduct,
 } from '@/api/product'
-import type { ProductDetailDto, ProductFormModel, ProductSavePayload } from '@/types/product-form'
-
-const DEFAULT_THUMB =
-  'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+import { fetchInventoryList, updateInventory } from '@/api/inventory'
+import { fetchExpressTemplateList } from '@/api/order'
+import type {
+  ProductDetailDto,
+  ProductFormModel,
+  ProductSavePayload,
+  ProductSkuRow,
+} from '@/types/product-form'
 
 export function createEmptyProductForm(): ProductFormModel {
   return {
@@ -38,7 +42,23 @@ export function createEmptyProductForm(): ProductFormModel {
     whiteImage: '',
     video: '',
     detail: '',
+    skuRows: [],
   }
+}
+
+function createPrimarySkuRow(form: ProductFormModel, productNo = ''): ProductSkuRow {
+  return {
+    skuId: productNo ? `P-${productNo}` : '',
+    skuName: form.subtitle || form.name || '默认规格',
+    skuCode: form.sku || '',
+    stock: form.stock || '0',
+    stockWarning: form.stockWarning || '0',
+    isPrimary: true,
+  }
+}
+
+function nextExtensionSkuId(): string {
+  return `E-${Date.now().toString(36).slice(-6)}`
 }
 
 function toPayload(form: ProductFormModel): ProductSavePayload {
@@ -63,7 +83,7 @@ function toPayload(form: ProductFormModel): ProductSavePayload {
     recommend: form.recommend,
     services: form.services,
     tags: form.tags || undefined,
-    mainImages: form.mainImages.length ? form.mainImages : [DEFAULT_THUMB],
+    mainImages: form.mainImages,
     whiteImage: form.whiteImage || undefined,
     video: form.video || undefined,
     detail: form.detail || undefined,
@@ -90,7 +110,7 @@ function applyDetailToForm(form: ProductFormModel, detail: ProductDetailDto) {
   form.recommend = detail.recommend ?? []
   form.services = detail.services ?? []
   form.tags = detail.tags ?? ''
-  form.mainImages = detail.mainImages?.length ? detail.mainImages : [DEFAULT_THUMB]
+  form.mainImages = detail.mainImages?.length ? [...detail.mainImages] : []
   form.whiteImage = detail.whiteImage ?? ''
   form.video = detail.video ?? ''
   form.detail = detail.detail ?? ''
@@ -107,6 +127,7 @@ export function useProductEditor() {
   const submitting = ref(false)
   const categoryOptions = ref<{ label: string; value: string }[]>([])
   const brandOptions = ref<{ label: string; value: string }[]>([])
+  const shippingOptions = ref<{ label: string; value: string }[]>([])
 
   const productId = computed(() => String(route.query.id || ''))
   const isEdit = computed(() => Boolean(productId.value))
@@ -130,19 +151,125 @@ export function useProductEditor() {
     ],
   }
 
+  function ensureSkuRows(productNo = '') {
+    if (form.skuRows.length === 0) {
+      form.skuRows.push(createPrimarySkuRow(form, productNo))
+      return
+    }
+    const primary = form.skuRows.find((r) => r.isPrimary)
+    if (primary) {
+      primary.skuName = form.subtitle || form.name || primary.skuName
+      primary.skuCode = form.sku
+      primary.stock = form.stock
+      primary.stockWarning = form.stockWarning || '0'
+      if (productNo) primary.skuId = `P-${productNo}`
+    } else {
+      form.skuRows.unshift(createPrimarySkuRow(form, productNo))
+    }
+  }
+
+  function syncFormFromPrimaryRow() {
+    const primary = form.skuRows.find((r) => r.isPrimary) ?? form.skuRows[0]
+    if (!primary) return
+    form.sku = primary.skuCode
+    form.stock = primary.stock
+    form.stockWarning = primary.stockWarning
+  }
+
+  async function loadInventorySkus(goodsId: string) {
+    const page = await fetchInventoryList({ keyword: goodsId, page: 1, pageSize: 20 })
+    const item = page.list.find((i) => i.goodsId === goodsId) ?? page.list[0]
+    if (!item?.skus?.length) {
+      ensureSkuRows(goodsId)
+      return
+    }
+    form.skuRows = item.skus.map((s) => ({
+      skuId: s.skuId,
+      skuName: s.skuName,
+      skuCode: s.skuCode || '',
+      stock: String(s.actualStock ?? 0),
+      stockWarning: String(s.warningStock ?? 0),
+      isPrimary: s.skuId.startsWith('P-'),
+    }))
+  }
+
+  async function syncInventorySkus(goodsId: string) {
+    ensureSkuRows(goodsId)
+    const skus = form.skuRows.map((row) => ({
+      skuName: row.skuName.trim() || (row.isPrimary ? form.subtitle || form.name : '扩展规格'),
+      skuId: row.isPrimary ? `P-${goodsId}` : row.skuId || nextExtensionSkuId(),
+      skuCode: row.skuCode.trim() || (row.isPrimary ? form.sku : `SKU-${goodsId}`),
+      actualStock: Number(row.stock) || 0,
+      warningStock: Number(row.stockWarning) || 0,
+      warehouseCode: 'WH-001',
+    }))
+    await updateInventory({ goodsId, skus })
+  }
+
+  function validateSkuRows(): boolean {
+    ensureSkuRows(productId.value)
+    if (form.skuRows.length === 0) {
+      ElMessage.warning('请至少配置一个 SKU 规格')
+      return false
+    }
+    for (const row of form.skuRows) {
+      if (!row.skuName.trim()) {
+        ElMessage.warning('请填写规格名称')
+        return false
+      }
+      if (!intPattern.test(row.stock)) {
+        ElMessage.warning(`规格「${row.skuName}」库存须为非负整数`)
+        return false
+      }
+      if (row.stockWarning && !intPattern.test(row.stockWarning)) {
+        ElMessage.warning(`规格「${row.skuName}」预警值须为非负整数`)
+        return false
+      }
+    }
+    return true
+  }
+
+  function addSkuRow() {
+    form.skuRows.push({
+      skuId: nextExtensionSkuId(),
+      skuName: '',
+      skuCode: '',
+      stock: '0',
+      stockWarning: '0',
+      isPrimary: false,
+    })
+  }
+
+  function removeSkuRow(index: number) {
+    const row = form.skuRows[index]
+    if (row?.isPrimary) {
+      ElMessage.warning('主规格不可删除')
+      return
+    }
+    form.skuRows.splice(index, 1)
+  }
+
   async function loadOptions() {
-    const [categories, brands] = await Promise.all([
+    const [categories, brands, templates] = await Promise.all([
       fetchCategoryOptions(),
       fetchBrandList({ page: 1, pageSize: 100, status: 'active' }),
+      fetchExpressTemplateList({ page: 1, pageSize: 100 }),
     ])
     categoryOptions.value = categories
     brandOptions.value = brands.list.map((b) => ({ label: b.name, value: b.id }))
+    shippingOptions.value = (templates.list || [])
+      .filter((t) => t.visible !== false)
+      .map((t) => ({
+        label: `${t.templateName}（${t.expressCompany}）`,
+        value: t.id,
+      }))
   }
 
   async function loadDetail() {
     if (!productId.value) return
     const detail = await fetchProductDetail(productId.value)
     applyDetailToForm(form, detail)
+    await loadInventorySkus(productId.value)
   }
 
   async function init() {
@@ -151,6 +278,8 @@ export function useProductEditor() {
       await loadOptions()
       if (isEdit.value) {
         await loadDetail()
+      } else {
+        ensureSkuRows()
       }
     } finally {
       pageLoading.value = false
@@ -166,6 +295,15 @@ export function useProductEditor() {
     if (currentStep.value === 0) {
       const valid = await validateStep()
       if (!valid) return
+      if (form.mainImages.length === 0) {
+        ElMessage.warning('请至少上传一张商品主图')
+        return
+      }
+      ensureSkuRows(productId.value)
+    }
+    if (currentStep.value === 1) {
+      if (!validateSkuRows()) return
+      syncFormFromPrimaryRow()
     }
     if (currentStep.value < 2) {
       currentStep.value += 1
@@ -184,36 +322,34 @@ export function useProductEditor() {
       currentStep.value = 0
       return
     }
+    if (form.mainImages.length === 0) {
+      ElMessage.warning('请至少上传一张商品主图')
+      currentStep.value = 0
+      return
+    }
+    if (!validateSkuRows()) {
+      currentStep.value = 1
+      return
+    }
+    syncFormFromPrimaryRow()
 
     submitting.value = true
     try {
       const payload = toPayload(form)
+      let goodsId = productId.value
       if (isEdit.value) {
         await updateProduct(productId.value, payload)
         ElMessage.success('商品已更新')
       } else {
         const { id } = await createProduct(payload)
+        goodsId = id
         ElMessage.success(`商品已创建，编号 ${id}`)
       }
+      await syncInventorySkus(goodsId)
       router.push('/product/list')
     } finally {
       submitting.value = false
     }
-  }
-
-  function mockUpload(field: 'mainImages' | 'whiteImage' | 'video') {
-    if (field === 'mainImages' && form.mainImages.length < 5) {
-      form.mainImages.push(DEFAULT_THUMB)
-    } else if (field === 'whiteImage') {
-      form.whiteImage = DEFAULT_THUMB
-    } else if (field === 'video') {
-      form.video = 'demo.mp4'
-    }
-    ElMessage.success('上传成功（演示）')
-  }
-
-  function removeMainImage(index: number) {
-    form.mainImages.splice(index, 1)
   }
 
   return {
@@ -225,6 +361,7 @@ export function useProductEditor() {
     submitting,
     categoryOptions,
     brandOptions,
+    shippingOptions,
     isEdit,
     pageTitle,
     productId,
@@ -232,7 +369,7 @@ export function useProductEditor() {
     nextStep,
     prevStep,
     submit,
-    mockUpload,
-    removeMainImage,
+    addSkuRow,
+    removeSkuRow,
   }
 }

@@ -280,6 +280,9 @@ public class PermissionDataInitializer implements CommandLineRunner {
         if (roleRepository.findByRoleKey("operator").isEmpty()) {
             SysRole operator = seedRole("普通操作员", "operator", 50, "邀请码注册默认角色，可在角色管理中调整权限");
             assignOperatorMenus(operator.getId(), menuRepository.findAllByOrderBySortNumAscIdAsc());
+        } else {
+            roleRepository.findByRoleKey("operator").ifPresent(op ->
+                    assignOperatorMenus(op.getId(), menuRepository.findAllByOrderBySortNumAscIdAsc()));
         }
     }
 

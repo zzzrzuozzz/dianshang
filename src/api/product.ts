@@ -196,6 +196,21 @@ export function deleteCategory(id: string) {
   return del(`/api/product/category/${id}`)
 }
 
+export function createCategory(data: Partial<CategoryVO>) {
+  return post<CategoryVO>('/api/product/category', data)
+}
+
+export function updateCategory(id: string, data: Partial<CategoryVO>) {
+  return put<CategoryVO>(`/api/product/category/${id}`, data)
+}
+
+export function transferCategoryProducts(fromCategoryCode: string, toCategoryCode: string) {
+  return post<{ moved: number }>('/api/product/category/transfer', {
+    fromCategoryCode,
+    toCategoryCode,
+  })
+}
+
 export function fetchBrandList(params: {
   keyword?: string
   status?: string
@@ -211,6 +226,14 @@ export function updateBrandVisible(id: string, visible: boolean) {
 
 export function deleteBrand(id: string) {
   return del(`/api/product/brand/${id}`)
+}
+
+export function createBrand(data: Partial<BrandVO>) {
+  return post<BrandVO>('/api/product/brand', data)
+}
+
+export function updateBrand(id: string, data: Partial<BrandVO>) {
+  return put<BrandVO>(`/api/product/brand/${id}`, data)
 }
 
 export function fetchCommentOverview() {

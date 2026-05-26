@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -114,7 +115,11 @@ public class OrderService {
                 (root, q, cb) -> cb.and(
                         cb.isFalse(root.get("deleted")),
                         cb.equal(root.get("orderNo"), orderNo)
-                )).stream().findFirst().orElse(null);
+                )).stream()
+                .filter(a -> !"closed".equals(a.getAfterSaleStatus()))
+                .max(Comparator.comparing(AfterSaleEntity::getApplyTime,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
         String returnAddress = orderAddressService.resolveDefaultFullAddress("return");
         if (returnAddress == null) {
             returnAddress = "广东省深圳市南山区科技园退货中心A栋";

@@ -1,5 +1,7 @@
 <template>
-  <NotificationListPanel
+  <div>
+    <NoticeScopeHelp title="运营推送说明" />
+    <NotificationListPanel
     msg-type="STATION"
     add-route="/ops/station-message/add"
     content-column-label="站内信内容"
@@ -9,10 +11,12 @@
     resend-published-label="再推"
     resend-draft-label="推送"
     batch-send-label="推送"
-  />
+    />
+  </div>
 </template>
 
 <script setup>
+import NoticeScopeHelp from '@/components/common/NoticeScopeHelp.vue'
 import NotificationListPanel from '@/components/ops/NotificationListPanel.vue'
 
 const stationPresets = [

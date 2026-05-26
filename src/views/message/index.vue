@@ -1,5 +1,6 @@
 <template>
   <div v-loading="loading" class="message-page">
+    <NoticeScopeHelp />
     <el-card shadow="never" class="type-card">
       <el-radio-group v-model="activeType" @change="handleTypeChange">
         <el-radio-button value="">
@@ -95,6 +96,7 @@ import {
   fetchUnreadNoticeSummary,
 } from '@/api/notice'
 import { triggerNoticeRefresh } from '@/utils/noticeHelpers'
+import NoticeScopeHelp from '@/components/common/NoticeScopeHelp.vue'
 
 const route = useRoute()
 const router = useRouter()

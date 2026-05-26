@@ -1,5 +1,7 @@
 <template>
-  <NotificationListPanel
+  <div>
+    <NoticeScopeHelp title="运营推送说明" />
+    <NotificationListPanel
     msg-type="SYSTEM"
     add-route="/ops/system-message/add"
     content-column-label="消息标题"
@@ -9,10 +11,12 @@
     :show-click-count="true"
     :show-presets="true"
     :category-tabs="categoryTabs"
-  />
+    />
+  </div>
 </template>
 
 <script setup>
+import NoticeScopeHelp from '@/components/common/NoticeScopeHelp.vue'
 import NotificationListPanel from '@/components/ops/NotificationListPanel.vue'
 
 const categoryTabs = [

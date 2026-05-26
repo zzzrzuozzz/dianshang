@@ -197,6 +197,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\search\GlobalSear
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\service\ExpressService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\service\FileUploadService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\notification\service\NotificationService.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\CategoryTransferRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\SeckillSkuSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\entity\ReturnReasonEntity.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\dto\ExpressPreviewVO.java
@@ -293,10 +294,12 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\repository\Orde
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\service\AdminPermissionService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\stats\dto\StatsKpiVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\PlatformConfigVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\AfterSaleProcessRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\support\InviteCodeSpecifications.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\controller\MemberController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\repository\SysAdminRoleRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\CategoryOptionVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\service\WithdrawNoticeSync.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\finance\dto\FinanceOverviewVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\stats\controller\StatsController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\ExpressTemplateVO.java
@@ -338,6 +341,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\dto\MenuTr
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\repository\SysMenuRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\entity\SysRoleMenu.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\controller\FileUploadController.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\service\ProductAuditNoticeSync.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\repository\AfterSaleRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\controller\TopicTypeController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\controller\SysConfigController.java

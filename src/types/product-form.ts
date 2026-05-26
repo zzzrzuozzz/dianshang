@@ -24,6 +24,17 @@ export interface ProductFormModel {
   whiteImage: string
   video: string
   detail: string
+  /** 多规格 SKU 行（Step2） */
+  skuRows: ProductSkuRow[]
+}
+
+export interface ProductSkuRow {
+  skuId: string
+  skuName: string
+  skuCode: string
+  stock: string
+  stockWarning: string
+  isPrimary: boolean
 }
 
 export interface ProductSavePayload {

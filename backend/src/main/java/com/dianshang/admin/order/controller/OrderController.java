@@ -105,6 +105,25 @@ public class OrderController {
                 timeType, startDate, endDate, status, page, pageSize));
     }
 
+    @PostMapping("/after-sale/{afterSaleNo}/approve")
+    public ApiResponse<Void> approveAfterSale(@PathVariable String afterSaleNo) {
+        afterSaleService.approve(afterSaleNo);
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/after-sale/{afterSaleNo}/reject")
+    public ApiResponse<Void> rejectAfterSale(@PathVariable String afterSaleNo,
+                                             @RequestBody(required = false) AfterSaleProcessRequest request) {
+        afterSaleService.reject(afterSaleNo, request != null ? request.getRemark() : null);
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/after-sale/{afterSaleNo}/confirm-return")
+    public ApiResponse<Void> confirmAfterSaleReturn(@PathVariable String afterSaleNo) {
+        afterSaleService.confirmReturn(afterSaleNo);
+        return ApiResponse.ok(null);
+    }
+
     @GetMapping("/setting/return-reason/list")
     public ApiResponse<PageResult<ReturnReasonVO>> returnReasonList(
             @RequestParam(required = false) String keyword,

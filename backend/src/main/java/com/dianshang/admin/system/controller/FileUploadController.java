@@ -23,4 +23,12 @@ public class FileUploadController {
         String url = fileUploadService.storeImage(file, biz);
         return ApiResponse.ok(new UploadResultVO(url));
     }
+
+    @PostMapping("/video")
+    public ApiResponse<UploadResultVO> uploadVideo(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "product") String biz) {
+        String url = fileUploadService.storeVideo(file, biz);
+        return ApiResponse.ok(new UploadResultVO(url));
+    }
 }

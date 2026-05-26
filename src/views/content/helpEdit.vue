@@ -15,9 +15,7 @@
           <el-input v-model="form.intro" type="textarea" :rows="3" placeholder="请输入（限100字）" maxlength="100" show-word-limit style="width: 400px" />
         </el-form-item>
         <el-form-item label="详情">
-          <div class="rich-editor-wrap">
-            <el-input v-model="form.content" type="textarea" :rows="8" placeholder="富文本详情" />
-          </div>
+          <SimpleRichEditor v-model="form.content" />
         </el-form-item>
         <el-form-item label="封面图" prop="coverImages">
           <ImageUploadGrid v-model="form.coverImages" :max="5" biz="content" hint="只支持jpg、png格式，最多5张" />
@@ -39,6 +37,7 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ImageUploadGrid from '@/components/common/ImageUploadGrid.vue'
+import SimpleRichEditor from '@/components/common/SimpleRichEditor.vue'
 import {
   createHelpForm,
   fetchHelpDetail,

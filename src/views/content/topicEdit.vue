@@ -15,9 +15,7 @@
           <el-input v-model="topicForm.intro" type="textarea" :rows="3" placeholder="请输入（限100字）" maxlength="100" show-word-limit style="width: 400px" />
         </el-form-item>
         <el-form-item label="详情">
-          <div class="rich-editor-wrap">
-            <el-input v-model="topicForm.content" type="textarea" :rows="8" placeholder="富文本详情" />
-          </div>
+          <SimpleRichEditor v-model="topicForm.content" />
         </el-form-item>
         <el-form-item label="封面图">
           <ImageUploadGrid
@@ -54,6 +52,7 @@ import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ImageUploadGrid from '@/components/common/ImageUploadGrid.vue'
+import SimpleRichEditor from '@/components/common/SimpleRichEditor.vue'
 import AudienceTargetFields from '@/components/ops/AudienceTargetFields.vue'
 import ProductPickDialog from '@/components/content/ProductPickDialog.vue'
 import { estimateAudience } from '@/api/ops'
