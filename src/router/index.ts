@@ -13,6 +13,18 @@ const router = createRouter({
       meta: { title: '登录' },
     },
     {
+      path: '/register',
+      name: 'Register',
+      component: () => import('@/views/Register.vue'),
+      meta: { title: '注册' },
+    },
+    {
+      path: '/forgot-password',
+      name: 'ForgotPassword',
+      component: () => import('@/views/ForgotPassword.vue'),
+      meta: { title: '找回密码' },
+    },
+    {
       path: '/redirect/:path(.*)',
       name: 'Redirect',
       component: () => import('@/views/Redirect.vue'),
@@ -27,6 +39,12 @@ const router = createRouter({
           name: 'Dashboard',
           component: () => import('@/views/Dashboard.vue'),
           meta: { title: '首页' },
+        },
+        {
+          path: 'message/index',
+          name: 'MessageCenter',
+          component: () => import('@/views/message/index.vue'),
+          meta: { title: '消息中心', subTitle: '系统通知' },
         },
         {
           path: 'profile/index',
@@ -466,17 +484,29 @@ const router = createRouter({
           component: () => import('@/views/permission/user.vue'),
           meta: { title: '权限管理', subTitle: '管理员' },
         },
+        {
+          path: 'permission/invite/generate',
+          name: 'InviteGenerate',
+          component: () => import('@/views/permission/inviteGenerate.vue'),
+          meta: { title: '权限管理', subTitle: '生成邀请码' },
+        },
+        {
+          path: 'permission/invite/list',
+          name: 'InviteList',
+          component: () => import('@/views/permission/inviteList.vue'),
+          meta: { title: '权限管理', subTitle: '邀请码列表' },
+        },
       ],
     },
   ],
 })
 
-const publicPaths = ['/login']
+const publicPaths = ['/login', '/register', '/forgot-password']
 
 router.beforeEach((to, _from, next) => {
   const token = getToken()
   if (publicPaths.includes(to.path)) {
-    if (token) {
+    if (token && (to.path === '/login' || to.path === '/register')) {
       next('/dashboard')
     } else {
       next()

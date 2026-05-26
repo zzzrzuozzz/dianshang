@@ -13,6 +13,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\StatusReq
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\CouponDetailVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\CommentPageVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\notification\dto\NotificationPageVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\entity\SysNotice.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\stats\dto\ProductCategoryPageVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\support\PromotionSupport.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\GrowthTaskVO.java
@@ -29,6 +30,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\entity\SysConf
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\user\AdminUserRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\service\ReturnReasonService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\inventory\dto\InventoryListVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\NoticeDataInitializer.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\advertisement\repository\OpsAdvertisementRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\service\PromotionService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\PromoActivityPageVO.java
@@ -74,11 +76,13 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\inventory\service\Inv
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\JwtProperties.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\MemberTagVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\GrowthBatchRequest.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\dto\InviteCodePageRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\help\entity\CmsHelpTypeEntity.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\MemberOrderBriefVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\service\TopicTypeService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\CouponSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\dto\RoleOptionVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\repository\SysNoticeRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\repository\MemberAddressRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\VisibleRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\MaintenanceStatusVO.java
@@ -86,6 +90,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\service\Ro
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\common\ApiResponse.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\service\OrderAddressService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\dto\TopicCommentReplyRequest.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\auth\dto\ForgotPasswordRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\SysConfigDataInitializer.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\ExpressTemplateSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\ProductDataInitializer.java
@@ -93,6 +98,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\advertisement\dto
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\advertisement\service\AdvertisementService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\search\GlobalSearchService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\service\AfterSaleService.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\controller\InviteCodeController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\dto\TopicTypeSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\dto\IdsRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\notification\dto\NotificationDetailVO.java
@@ -103,6 +109,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\SysConfigV
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\repository\GrowthConfigRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\finance\dto\StatementPageRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\dto\AdminVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\entity\SysInviteCode.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\controller\ProductController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\entity\MemberTagRelEntity.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\repository\CouponClaimRepository.java
@@ -119,10 +126,12 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\UploadProperti
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\auth\AuthService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\help\entity\CmsHelpArticleEntity.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\notification\dto\AudienceEstimateRequest.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\repository\SysInviteCodeRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\common\BusinessException.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\ReturnReasonSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\CommentOverviewVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\OrderListVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\dto\InviteCodeGenerateRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\SecurityConfig.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\support\ProductMapper.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\security\JwtAuthenticationFilter.java
@@ -138,6 +147,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\help\reposito
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\LevelOptionVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\repository\SysRoleMenuRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\auth\dto\LoginRequest.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\service\SysNoticeService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\dto\ContentPageVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\stats\service\StatsService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\repository\SeckillActivityRepository.java
@@ -149,6 +159,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\finance\dto\Transacti
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\advertisement\dto\AdvertisementListVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\stats\dto\ProductRankingPageVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\finance\support\FinanceLabels.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\NoticeVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\service\CategoryService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\finance\service\FinanceService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\support\MemberSupport.java
@@ -156,6 +167,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\PromoAc
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\dto\TypeOptionVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\help\dto\HelpArticleListVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\common\Jsons.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\InviteCodeDataInitializer.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\repository\GroupBuySkuRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\advertisement\controller\AdvertisementController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\repository\MemberTagRepository.java
@@ -164,9 +176,11 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\entity\Coup
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\finance\repository\FinWithdrawApplyRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\GrowthRewardsVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\dto\TopicProductVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\support\NoticeLabels.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\MemberListVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\dto\AdminPageRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\search\dto\GlobalSearchResultVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\service\InviteCodeService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\repository\CmsTopicCommentRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\dashboard\DashboardPendingTask.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\entity\MemberLevelEntity.java
@@ -178,6 +192,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\GroupBu
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\ProductSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\service\RegionService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\dashboard\DashboardService.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\support\NoticeSpecifications.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\search\GlobalSearchController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\service\ExpressService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\service\FileUploadService.java
@@ -196,6 +211,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\RegionFullSqlI
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\SeckillSkuVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\support\ProductSpecifications.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\common\PageResult.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\dto\InviteCodeVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\MemberLevelSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\entity\ProductBrand.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\entity\GroupBuyActivityEntity.java
@@ -207,6 +223,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\ProductVO
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\repository\MemberTagRelRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\repository\ProductCommentRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\BrandVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\NoticePageRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\dto\TopicListVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\entity\SysAdminRole.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\ops\notification\controller\NotificationController.java
@@ -236,6 +253,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\support\Pe
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\ContentDataInitializer.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\controller\OrderController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\entity\SysRole.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\auth\dto\RegisterRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\entity\CouponEntity.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\service\MemberService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\finance\controller\FinanceController.java
@@ -258,6 +276,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\Product
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\inventory\dto\InventoryPageVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\entity\ProductCategory.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\profile\dto\ProfileUpdateRequest.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\NoticeUnreadSummaryVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\config\RegionDataInitializer.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\repository\MemberLevelRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\entity\CmsTopicCommentEntity.java
@@ -274,6 +293,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\repository\Orde
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\service\AdminPermissionService.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\stats\dto\StatsKpiVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\PlatformConfigVO.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\support\InviteCodeSpecifications.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\controller\MemberController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\repository\SysAdminRoleRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\product\dto\CategoryOptionVO.java
@@ -307,6 +327,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\service\OrderSe
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\content\topic\dto\TopicCommentVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\entity\GrowthConfigEntity.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\support\OrderSpecifications.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\controller\SysNoticeController.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\common\TreeNodeVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\dto\MemberDetailVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\OrderAddressVO.java
@@ -333,6 +354,7 @@ C:\new\dianshang\backend\src\main\java\com\dianshang\admin\permission\controller
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\IdsRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\GroupBuySkuSaveRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\member\repository\MemberRepository.java
+C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\dto\NoticeIdsRequest.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\system\repository\RegionRepository.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\promotion\dto\CouponHistoryVO.java
 C:\new\dianshang\backend\src\main\java\com\dianshang\admin\order\dto\AfterSalePageVO.java

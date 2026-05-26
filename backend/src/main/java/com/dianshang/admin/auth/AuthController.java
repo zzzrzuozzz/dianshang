@@ -1,7 +1,9 @@
 package com.dianshang.admin.auth;
 
+import com.dianshang.admin.auth.dto.ForgotPasswordRequest;
 import com.dianshang.admin.auth.dto.LoginRequest;
 import com.dianshang.admin.auth.dto.LoginResponse;
+import com.dianshang.admin.auth.dto.RegisterRequest;
 import com.dianshang.admin.common.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
@@ -20,6 +22,17 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok(authService.login(request));
+    }
+
+    @PostMapping("/register")
+    public ApiResponse<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ApiResponse.ok(authService.register(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ApiResponse.ok(null);
     }
 
     /** 刷新当前登录用户的菜单与权限（角色变更后调用） */

@@ -59,8 +59,10 @@ public class PermissionDataInitializer implements CommandLineRunner {
         List<SysMenu> allMenus = seedMenus();
         SysRole adminRole = seedRole("超级管理员", PermissionQueryService.SUPER_ADMIN_KEY, 0, "拥有全部菜单");
         SysRole financeRole = seedRole("财务专员", "finance", 10, "仅财务管理相关权限");
+        SysRole operatorRole = seedRole("普通操作员", "operator", 50, "邀请码注册默认角色，可在角色管理中调整权限");
         assignAllMenus(adminRole.getId(), allMenus);
         assignFinanceMenus(financeRole.getId(), allMenus);
+        assignOperatorMenus(operatorRole.getId(), allMenus);
         linkDefaultAdminRole();
         seedFinanceDemoUser(financeRole);
     }
@@ -69,6 +71,7 @@ public class PermissionDataInitializer implements CommandLineRunner {
         List<SysMenu> list = new ArrayList<>();
         SysMenu dashboard = saveMenu(0L, "首页", "C", "/dashboard", null, "HomeFilled", 1);
         list.add(dashboard);
+        list.add(saveMenu(0L, "消息中心", "C", "/message/index", null, "Bell", 2));
 
         SysMenu product = saveMenu(0L, "商品", "M", null, null, "Goods", 10);
         list.add(product);
@@ -149,6 +152,8 @@ public class PermissionDataInitializer implements CommandLineRunner {
         list.add(saveMenu(permission.getId(), "菜单管理", "C", "/permission/menu", null, null, 1));
         list.add(saveMenu(permission.getId(), "角色管理", "C", "/permission/role", null, null, 2));
         list.add(saveMenu(permission.getId(), "管理员", "C", "/permission/user", null, null, 3));
+        list.add(saveMenu(permission.getId(), "生成邀请码", "C", "/permission/invite/generate", null, null, 4));
+        list.add(saveMenu(permission.getId(), "邀请码列表", "C", "/permission/invite/list", null, null, 5));
 
         return menuRepository.findAllByOrderBySortNumAscIdAsc();
     }
@@ -207,12 +212,32 @@ public class PermissionDataInitializer implements CommandLineRunner {
                     rm.setMenuId(m.getId());
                     roleMenuRepository.save(rm);
                 });
-        menus.stream().filter(m -> "/dashboard".equals(m.getPath())).findFirst().ifPresent(d -> {
+        menus.stream().filter(m -> "/dashboard".equals(m.getPath()) || "/message/index".equals(m.getPath())).forEach(d -> {
             SysRoleMenu rm = new SysRoleMenu();
             rm.setRoleId(roleId);
             rm.setMenuId(d.getId());
             roleMenuRepository.save(rm);
         });
+    }
+
+    private void assignOperatorMenus(Long roleId, List<SysMenu> menus) {
+        roleMenuRepository.deleteByRoleId(roleId);
+        menus.stream()
+                .filter(m -> {
+                    if ("/dashboard".equals(m.getPath()) || "/message/index".equals(m.getPath())) {
+                        return true;
+                    }
+                    if ("/product/list".equals(m.getPath()) || "/order/list".equals(m.getPath())) {
+                        return true;
+                    }
+                    return "商品".equals(m.getMenuName()) || "订单".equals(m.getMenuName());
+                })
+                .forEach(m -> {
+                    SysRoleMenu rm = new SysRoleMenu();
+                    rm.setRoleId(roleId);
+                    rm.setMenuId(m.getId());
+                    roleMenuRepository.save(rm);
+                });
     }
 
     /** 旧库增量补全按钮级权限，避免升级后操作按钮缺失 */
@@ -239,6 +264,23 @@ public class PermissionDataInitializer implements CommandLineRunner {
                         saveMenu(withdraw.getId(), "提现审核按钮", "F", null, "finance:withdraw:verify", null, 1);
                     }
                 });
+        if (all.stream().noneMatch(m -> "/message/index".equals(m.getPath()))) {
+            saveMenu(0L, "消息中心", "C", "/message/index", null, "Bell", 2);
+        }
+        List<SysMenu> refreshed = menuRepository.findAllByOrderBySortNumAscIdAsc();
+        SysMenu permissionRoot = refreshed.stream().filter(m -> "权限管理".equals(m.getMenuName())).findFirst().orElse(null);
+        if (permissionRoot != null) {
+            if (refreshed.stream().noneMatch(m -> "/permission/invite/generate".equals(m.getPath()))) {
+                saveMenu(permissionRoot.getId(), "生成邀请码", "C", "/permission/invite/generate", null, null, 4);
+            }
+            if (refreshed.stream().noneMatch(m -> "/permission/invite/list".equals(m.getPath()))) {
+                saveMenu(permissionRoot.getId(), "邀请码列表", "C", "/permission/invite/list", null, null, 5);
+            }
+        }
+        if (roleRepository.findByRoleKey("operator").isEmpty()) {
+            SysRole operator = seedRole("普通操作员", "operator", 50, "邀请码注册默认角色，可在角色管理中调整权限");
+            assignOperatorMenus(operator.getId(), menuRepository.findAllByOrderBySortNumAscIdAsc());
+        }
     }
 
     private void linkDefaultAdminRole() {

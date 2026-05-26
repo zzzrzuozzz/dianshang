@@ -5,7 +5,7 @@ const PERMS_KEY = 'admin_perms'
 const ROLES_KEY = 'admin_roles'
 
 /** 无需菜单授权即可访问的路由 */
-export const PUBLIC_ROUTE_PREFIXES = ['/dashboard', '/profile', '/redirect']
+export const PUBLIC_ROUTE_PREFIXES = ['/dashboard', '/profile', '/redirect', '/message']
 
 /** 详情页映射到列表菜单路径，便于权限继承 */
 const DETAIL_ROUTE_BASE = [

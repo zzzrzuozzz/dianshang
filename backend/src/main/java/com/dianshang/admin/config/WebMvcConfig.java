@@ -26,7 +26,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/api/system/menu/**",
                         "/api/system/role/**",
-                        "/api/system/admin/**"
+                        "/api/system/admin/**",
+                        "/api/system/invite-code/**"
                 );
     }
 

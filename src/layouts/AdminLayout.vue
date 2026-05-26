@@ -44,9 +44,7 @@
         </div>
         <div class="header-right">
           <GlobalSearch />
-          <el-badge :value="99" :max="99" class="header-badge">
-            <el-icon class="header-icon"><Bell /></el-icon>
-          </el-badge>
+          <NoticeBell />
           <el-dropdown trigger="click" @command="handleCommand">
             <div class="avatar-wrapper">
               <el-avatar :size="32" :src="headerUser.avatar" />
@@ -77,8 +75,9 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Fold, Expand, Refresh, Bell, ArrowDown } from '@element-plus/icons-vue'
+import { Fold, Expand, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import GlobalSearch from '@/components/layout/GlobalSearch.vue'
+import NoticeBell from '@/components/layout/NoticeBell.vue'
 import DynamicMenu from '@/components/layout/DynamicMenu.vue'
 import { refreshAuthSession } from '@/api/auth'
 import { getProfile } from '@/api/profile'

@@ -92,7 +92,7 @@
         </el-form-item>
       </el-form>
       <p class="form-tip">
-        分配角色后，该账号登录时仅加载对应菜单；JWT 会话内携带 roleKey，前端根据菜单树动态渲染侧栏（router 静态注册 + 路径守卫）。
+        自助注册用户会出现在本列表；其菜单由邀请码绑定角色决定，请在「角色管理」中调整权限（仅超级管理员可维护菜单/角色/邀请码）。
       </p>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>

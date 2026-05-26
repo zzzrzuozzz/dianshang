@@ -63,9 +63,8 @@
       </el-form>
 
       <footer class="login-footer">
-        <a href="javascript:void(0)" class="forgot-link" @click.prevent="handleForgotPassword">
-          忘记密码？
-        </a>
+        <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
+        <router-link to="/register" class="forgot-link register-link">注册账号</router-link>
       </footer>
     </div>
   </div>
@@ -124,9 +123,6 @@ const handleLogin = async () => {
   }
 }
 
-const handleForgotPassword = () => {
-  ElMessage.info('请联系管理员重置密码')
-}
 </script>
 
 <style scoped>
@@ -219,8 +215,12 @@ const handleForgotPassword = () => {
 
 .login-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   margin-top: 16px;
+}
+
+.register-link {
+  color: #409eff;
 }
 
 .forgot-link {

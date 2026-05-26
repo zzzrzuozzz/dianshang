@@ -150,11 +150,17 @@ mvn spring-boot:run
 | POST | `/api/system/admin/save` | 保存管理员及角色 |
 | PUT | `/api/system/admin/{id}/status` | 启用/禁用管理员 |
 | GET | `/api/auth/session` | 刷新当前用户菜单与 perms |
+| POST | `/api/auth/register` | 公开注册（手机/邮箱 + 用户名≥6 + 密码≥6 + 邀请码） |
+| POST | `/api/auth/forgot-password` | 找回密码（注册手机/邮箱 + 邀请码 + 新密码） |
+| POST | `/api/system/invite-code/generate` | 超管随机生成邀请码（绑定角色） |
+| POST | `/api/system/invite-code/page` | 邀请码分页（含是否已使用） |
+
+表：`sys_invite_code`。演示邀请码：`DEMO2026REG01`（绑定 `operator` 普通操作员角色）。
 
 登录响应含 `menus`、`roleKeys`、`perms`；`admin` 角色拥有全部菜单。演示账号：`finance` / `finance123`（仅财务模块）。
 
 **鉴权闭环**：
-- 菜单/角色/管理员维护接口（`/api/system/menu|role|admin/**`）仅超级管理员可访问。
+- 菜单/角色/管理员/邀请码维护接口仅超级管理员可访问。
 - JWT 过滤器注入 `roleKey` 与按钮 `perms` 到 Spring Security 上下文。
 - 敏感操作服务端校验：`order:ship`、`order:refund`、`finance:withdraw:verify`。
 - 前端：`DynamicMenu` 动态侧栏、`canAccessPath` 路由守卫、`v-perm` 按钮级显隐；布局挂载时 `GET /api/auth/session` 刷新权限。
@@ -173,6 +179,20 @@ mvn spring-boot:run
 | GET | `/api/system/maintenance/initializer-status` | 启动种子脚本健康检查 |
 
 表：`sys_config`（动态扩展，无需改表结构即可新增配置键）。
+
+## 系统消息通知（`/api/system/notice`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/system/notice/unread-list?limit=5&urgent=false` | 顶部铃铛微型未读列表 |
+| GET | `/api/system/notice/unread-summary` | 未读总数与各类型计数 |
+| POST | `/api/system/notice/page` | 消息中心分页（`noticeType` 可选） |
+| PUT | `/api/system/notice/read` | 批量标记已读 `{ "ids": [1,2] }` |
+| PUT | `/api/system/notice/read-all` | 一键已读（可选 `noticeType`） |
+| POST | `/api/system/notice/delete` | 批量删除 `{ "ids": [1,2] }` |
+| GET | `/api/system/notice/{id}` | 消息详情 |
+
+表：`sys_notice`。启动时 `NoticeDataInitializer` 写入演示通知，并根据待审批提现单动态同步「商户提现待审批」待办。前端：`NoticeBell` 60 秒轮询 + `message/index` 详情已读联动刷新红点。
 
 **全局联动**：配置变更 → 登录页/侧栏品牌、首页横幅、订单详情平台规则；`unpaid_close_minutes` 驱动定时关单；`stock_deduct_strategy` 驱动发货出库策略；清缓存后重新加载配置。
 
