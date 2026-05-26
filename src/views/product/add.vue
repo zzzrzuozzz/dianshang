@@ -1,11 +1,15 @@
 <template>
-  <div class="add-product">
-    <!-- 步骤条 -->
+  <div v-loading="pageLoading" class="add-product">
+    <div class="page-head">
+      <h2 class="page-title">{{ pageTitle }}</h2>
+      <p v-if="isEdit" class="page-sub">商品编号：{{ productId }}</p>
+    </div>
+
     <el-card shadow="never" class="steps-card">
       <el-steps :active="currentStep" align-center finish-status="success">
         <el-step title="商品信息" />
         <el-step title="商品属性" />
-        <el-step title="提交" />
+        <el-step title="提交保存" />
       </el-steps>
     </el-card>
 
@@ -16,8 +20,8 @@
       label-width="100px"
       class="product-form"
     >
-      <div class="form-layout">
-        <!-- 左侧基础表单 -->
+      <!-- Step 1：基础信息 -->
+      <div v-show="currentStep === 0" class="form-layout">
         <el-card shadow="never" class="form-card">
           <el-form-item label="商品分类" prop="category">
             <el-select v-model="form.category" placeholder="请选择商品分类" style="width: 100%">
@@ -67,9 +71,20 @@
             </el-select>
           </el-form-item>
 
+          <el-form-item label="配送区域">
+            <AreaCascader
+              v-model="form.deliveryRegions"
+              multiple
+              placeholder="不选则全国可配送；可多选省/市/区"
+            />
+            <p class="form-hint">
+              限制商品可配送范围。使用国标区划懒加载，与订单地址、运营圈选共用同一数据源。
+            </p>
+          </el-form-item>
+
           <el-form-item label="商品货号" prop="sku">
             <el-input v-model="form.sku" placeholder="请输入 (限30字)" maxlength="30" />
-            <p class="form-hint">如果您不输入商品货号，系统将自动生成一个唯一的货号。</p>
+            <p class="form-hint">留空时系统将按商品编号自动生成货号。</p>
           </el-form-item>
 
           <el-row :gutter="16">
@@ -97,9 +112,6 @@
               </el-form-item>
             </el-col>
           </el-row>
-          <p class="form-hint block-hint">
-            单规格直接填写；多规格请在下一步「商品属性」中分别设置各规格库存。
-          </p>
 
           <el-row :gutter="16">
             <el-col :span="12">
@@ -145,16 +157,19 @@
           </el-form-item>
         </el-card>
 
-        <!-- 右侧媒体与富文本 -->
         <el-card shadow="never" class="form-card media-card">
           <div class="upload-section">
             <h4 class="section-title">商品主图</h4>
             <div class="upload-grid">
               <div v-for="(img, idx) in form.mainImages" :key="idx" class="upload-item has-image">
                 <el-image :src="img" fit="cover" class="upload-preview" />
-                <span class="upload-remove" @click="removeImage('mainImages', idx)">×</span>
+                <span class="upload-remove" @click="removeMainImage(idx)">×</span>
               </div>
-              <div v-if="form.mainImages.length < 5" class="upload-item upload-trigger" @click="mockUpload('mainImages')">
+              <div
+                v-if="form.mainImages.length < 5"
+                class="upload-item upload-trigger"
+                @click="mockUpload('mainImages')"
+              >
                 <el-icon :size="28"><Plus /></el-icon>
                 <span>上传</span>
               </div>
@@ -174,7 +189,6 @@
                 <span>上传</span>
               </div>
             </div>
-            <p class="form-hint">只能上传 jpg, png 格式，最多 1 张</p>
           </div>
 
           <div class="upload-section">
@@ -191,119 +205,116 @@
                 <span>上传</span>
               </div>
             </div>
-            <p class="form-hint">只能上传 mp4 格式，最多 1 个</p>
           </div>
 
           <div class="upload-section editor-section">
-            <h4 class="section-title">详情图</h4>
-            <div class="rich-editor">
-              <div class="editor-toolbar">
-                <span v-for="tool in editorTools" :key="tool" class="toolbar-btn">{{ tool }}</span>
-              </div>
-              <el-input
-                v-model="form.detail"
-                type="textarea"
-                :rows="12"
-                placeholder="请输入商品详情描述..."
-                class="editor-body"
-              />
-            </div>
+            <h4 class="section-title">详情描述</h4>
+            <el-input
+              v-model="form.detail"
+              type="textarea"
+              :rows="10"
+              placeholder="请输入商品详情描述..."
+            />
           </div>
         </el-card>
       </div>
 
+      <!-- Step 2：属性（占位，后续扩展多规格） -->
+      <el-card v-show="currentStep === 1" shadow="never" class="form-card step-card">
+        <el-empty description="多规格 SKU 将在后续版本支持，当前使用单规格库存（上一步已填写）" />
+      </el-card>
+
+      <!-- Step 3：确认 -->
+      <el-card v-show="currentStep === 2" shadow="never" class="form-card step-card">
+        <el-descriptions title="请确认商品信息" :column="2" border>
+          <el-descriptions-item label="商品名称">{{ form.name }}</el-descriptions-item>
+          <el-descriptions-item label="分类">{{ categoryLabel }}</el-descriptions-item>
+          <el-descriptions-item label="品牌">{{ brandLabel }}</el-descriptions-item>
+          <el-descriptions-item label="售价">¥{{ form.price }}</el-descriptions-item>
+          <el-descriptions-item label="库存">{{ form.stock }}</el-descriptions-item>
+          <el-descriptions-item label="上架">{{ form.onSale ? '是' : '否' }}</el-descriptions-item>
+          <el-descriptions-item label="货号">{{ form.sku || '自动生成' }}</el-descriptions-item>
+          <el-descriptions-item label="配送区域">
+            {{ form.deliveryRegions?.length ? `已选 ${form.deliveryRegions.length} 个地区` : '全国' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="主图数量">{{ form.mainImages.length }} 张</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
       <div class="form-footer">
-        <el-button type="primary" size="large" @click="handleNext">下一步</el-button>
+        <el-button v-if="currentStep > 0" size="large" @click="prevStep">上一步</el-button>
+        <el-button v-if="currentStep < 2" type="primary" size="large" @click="nextStep">下一步</el-button>
+        <el-button
+          v-else
+          type="primary"
+          size="large"
+          :loading="submitting"
+          @click="submit"
+        >
+          {{ isEdit ? '保存修改' : '提交保存' }}
+        </el-button>
       </div>
     </el-form>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, onMounted } from 'vue'
 import { Plus, VideoPlay } from '@element-plus/icons-vue'
-import { fetchBrandList, fetchCategoryOptions } from '@/api/product'
+import AreaCascader from '@/components/AreaCascader/index.vue'
+import { useProductEditor } from '@/composables/useProductEditor'
 
-const formRef = ref(null)
-const categoryOptions = ref([])
-const brandOptions = ref([])
-const currentStep = ref(0)
+const {
+  formRef,
+  form,
+  rules,
+  currentStep,
+  pageLoading,
+  submitting,
+  categoryOptions,
+  brandOptions,
+  isEdit,
+  pageTitle,
+  productId,
+  init,
+  nextStep,
+  prevStep,
+  submit,
+  mockUpload,
+  removeMainImage,
+} = useProductEditor()
 
-const mockThumb =
-  'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+const categoryLabel = computed(
+  () => categoryOptions.value.find((o) => o.value === form.category)?.label || form.category,
+)
 
-const form = reactive({
-  category: '',
-  name: '',
-  subtitle: '',
-  brand: '',
-  intro: '',
-  shipping: '',
-  sku: '',
-  price: '',
-  marketPrice: '',
-  stock: '',
-  stockWarning: '',
-  unit: '',
-  weight: '',
-  preSale: true,
-  onSale: false,
-  recommend: [],
-  services: [],
-  tags: '',
-  mainImages: [mockThumb],
-  whiteImage: mockThumb,
-  video: 'mock-video.mp4',
-  detail: '',
-})
+const brandLabel = computed(
+  () => brandOptions.value.find((o) => o.value === form.brand)?.label || form.brand,
+)
 
-const rules = {
-  category: [{ required: true, message: '请选择商品分类', trigger: 'change' }],
-  name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
-  brand: [{ required: true, message: '请选择品牌', trigger: 'change' }],
-  intro: [{ required: true, message: '请输入商品介绍', trigger: 'blur' }],
-  price: [{ required: true, message: '请输入售价', trigger: 'blur' }],
-  stock: [{ required: true, message: '请输入库存', trigger: 'blur' }],
-}
-
-const editorTools = ['B', 'I', 'U', 'S', '左', '中', '右', '列表', '图片', '链接']
-
-onMounted(async () => {
-  const [categories, brands] = await Promise.all([
-    fetchCategoryOptions(),
-    fetchBrandList({ page: 1, pageSize: 100, status: 'active' }),
-  ])
-  categoryOptions.value = categories
-  brandOptions.value = brands.list.map((b) => ({ label: b.name, value: b.id }))
-})
-
-const mockUpload = (field) => {
-  if (field === 'mainImages') {
-    if (form.mainImages.length < 5) form.mainImages.push(mockThumb)
-  } else if (field === 'whiteImage') {
-    form.whiteImage = mockThumb
-  } else if (field === 'video') {
-    form.video = 'mock-video.mp4'
-  }
-  ElMessage.success('上传成功（模拟）')
-}
-
-const removeImage = (field, idx) => {
-  if (field === 'mainImages') form.mainImages.splice(idx, 1)
-}
-
-const handleNext = async () => {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-  currentStep.value = 1
-  ElMessage.success('商品信息校验通过，进入下一步')
-}
+onMounted(init)
 </script>
 
 <style scoped>
 .add-product {
   min-height: calc(100vh - 120px);
+}
+
+.page-head {
+  margin-bottom: 12px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.page-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #909399;
 }
 
 .steps-card {
@@ -332,6 +343,10 @@ const handleNext = async () => {
   padding: 24px;
 }
 
+.step-card {
+  margin-bottom: 16px;
+}
+
 .media-card {
   flex: 1;
   max-width: 520px;
@@ -342,10 +357,6 @@ const handleNext = async () => {
   font-size: 12px;
   color: #909399;
   line-height: 1.5;
-}
-
-.block-hint {
-  margin: -8px 0 16px 100px;
 }
 
 .switch-hint {
@@ -430,45 +441,10 @@ const handleNext = async () => {
   color: #fff;
 }
 
-.rich-editor {
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.editor-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  font-size: 12px;
-  color: #606266;
-  background: #fff;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  cursor: default;
-}
-
-.editor-body :deep(.el-textarea__inner) {
-  border: none;
-  box-shadow: none;
-  border-radius: 0;
-}
-
 .form-footer {
   display: flex;
   justify-content: center;
+  gap: 12px;
   margin-top: 24px;
   padding-bottom: 24px;
 }

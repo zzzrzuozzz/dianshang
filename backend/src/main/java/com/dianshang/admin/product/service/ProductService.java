@@ -4,9 +4,14 @@ import com.dianshang.admin.common.BusinessException;
 import com.dianshang.admin.common.TabCountVO;
 import com.dianshang.admin.product.dto.*;
 import com.dianshang.admin.product.entity.Product;
+import com.dianshang.admin.product.entity.ProductBrand;
+import com.dianshang.admin.product.repository.ProductBrandRepository;
+import com.dianshang.admin.product.repository.ProductCategoryRepository;
 import com.dianshang.admin.product.repository.ProductRepository;
+import com.dianshang.admin.product.support.ProductFormMapper;
 import com.dianshang.admin.product.support.ProductMapper;
 import com.dianshang.admin.product.support.ProductSpecifications;
+import org.springframework.util.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -19,9 +24,66 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductCategoryRepository categoryRepository;
+    private final ProductBrandRepository brandRepository;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository,
+                          ProductCategoryRepository categoryRepository,
+                          ProductBrandRepository brandRepository) {
         this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.brandRepository = brandRepository;
+    }
+
+    public ProductDetailVO getDetail(String productNo) {
+        return ProductFormMapper.toDetailVO(requireProduct(productNo));
+    }
+
+    @Transactional
+    public ProductSaveResultVO create(ProductSaveRequest request) {
+        validateReferences(request);
+        Product product = new Product();
+        String productNo = generateProductNo();
+        ProductBrand brand = requireBrand(request.getBrand());
+        ProductFormMapper.applyCreate(product, request, brand, productNo);
+        productRepository.save(product);
+        return new ProductSaveResultVO(productNo);
+    }
+
+    @Transactional
+    public ProductSaveResultVO update(String productNo, ProductSaveRequest request) {
+        validateReferences(request);
+        Product product = requireProduct(productNo);
+        ProductBrand brand = requireBrand(request.getBrand());
+        ProductFormMapper.applyUpdate(product, request, brand);
+        productRepository.save(product);
+        return new ProductSaveResultVO(productNo);
+    }
+
+    private void validateReferences(ProductSaveRequest request) {
+        categoryRepository.findByCodeAndDeletedFalse(request.getCategory())
+                .orElseThrow(() -> new BusinessException("商品分类不存在"));
+        requireBrand(request.getBrand());
+    }
+
+    private ProductBrand requireBrand(String brandCode) {
+        return brandRepository.findByCodeAndDeletedFalse(brandCode)
+                .orElseThrow(() -> new BusinessException("品牌不存在"));
+    }
+
+    private String generateProductNo() {
+        return productRepository.findTopByDeletedFalseOrderByIdDesc()
+                .map(p -> nextNumericNo(p.getProductNo()))
+                .orElse("025345");
+    }
+
+    private String nextNumericNo(String lastNo) {
+        try {
+            int next = Integer.parseInt(lastNo) + 1;
+            return String.format("%06d", next);
+        } catch (NumberFormatException ex) {
+            return String.format("%06d", 25345 + productRepository.countByDeletedFalse());
+        }
     }
 
     public ProductPageVO list(String keyword, String category, String status, int page, int pageSize) {

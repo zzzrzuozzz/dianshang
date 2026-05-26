@@ -144,6 +144,7 @@ export function createEmptyPushForm() {
     detail: '',
     coverImages: [],
     memberLevels: ['all'],
+    regions: [],
     tags: { newUser: ['all'], firstBuy: ['all'], repurchase: ['all'], active: ['all'] },
     sendType: 1,
     publishTime: '',

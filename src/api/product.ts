@@ -1,4 +1,5 @@
 import { del, get, post, put } from '@/utils/request'
+import type { ProductDetailDto, ProductSavePayload } from '@/types/product-form'
 
 export interface ProductVO {
   id: string
@@ -103,6 +104,21 @@ export interface CommentPageResult {
   page: number
   pageSize: number
   tabs: TabCount[]
+}
+
+/** GET /api/product/{id} */
+export function fetchProductDetail(productNo: string) {
+  return get<ProductDetailDto>(`/api/product/${productNo}`)
+}
+
+/** POST /api/product */
+export function createProduct(data: ProductSavePayload) {
+  return post<{ id: string }>('/api/product', data)
+}
+
+/** PUT /api/product/{id} */
+export function updateProduct(productNo: string, data: ProductSavePayload) {
+  return put<{ id: string }>(`/api/product/${productNo}`, data)
 }
 
 /** GET /api/product/list */

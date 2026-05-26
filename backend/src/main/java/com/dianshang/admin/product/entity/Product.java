@@ -67,6 +67,49 @@ public class Product {
     @Column(name = "brand_code", length = 50)
     private String brandCode;
 
+    @Column(columnDefinition = "CLOB")
+    private String intro;
+
+    @Column(name = "shipping_template", length = 20)
+    private String shippingTemplate;
+
+    @Column(name = "stock_warning")
+    private Integer stockWarning = 0;
+
+    @Column(length = 20)
+    private String unit;
+
+    @Column(length = 20)
+    private String weight;
+
+    @Column(name = "pre_sale")
+    private Boolean preSale = false;
+
+    @Column(name = "recommend_tags", length = 200)
+    private String recommendTags;
+
+    @Column(name = "service_tags", length = 200)
+    private String serviceTags;
+
+    @Column(name = "product_tags", length = 200)
+    private String productTags;
+
+    @Column(name = "main_images", columnDefinition = "CLOB")
+    private String mainImages;
+
+    @Column(name = "white_image", length = 500)
+    private String whiteImage;
+
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
+
+    @Column(name = "detail_content", columnDefinition = "CLOB")
+    private String detailContent;
+
+    /** JSON: [["省code","市code","区code"],...] 配送可售区域，空表示全国 */
+    @Column(name = "delivery_regions", columnDefinition = "CLOB")
+    private String deliveryRegions;
+
     @Column(nullable = false)
     private Boolean deleted = false;
 }

@@ -29,17 +29,13 @@
             <el-radio value="all">全部地区</el-radio>
             <el-radio value="specific">指定地区</el-radio>
           </el-radio-group>
-          <el-select
+          <AreaCascader
             v-if="form.cityMode === 'specific'"
-            v-model="form.cities"
+            v-model="form.regionCodes"
             multiple
-            placeholder="请选择地区（可多选）"
-            style="width: 400px; margin-top: 8px; display: block"
-          >
-            <el-option label="深圳" value="shenzhen" />
-            <el-option label="广州" value="guangzhou" />
-            <el-option label="北京" value="beijing" />
-          </el-select>
+            placeholder="请选择省/市/区（可多选）"
+            style="margin-top: 8px; max-width: 480px"
+          />
         </el-form-item>
 
         <el-form-item label="注册时间">
@@ -110,6 +106,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import AreaCascader from '@/components/AreaCascader/index.vue'
 import { memberLevelOptions } from '@/mock/user'
 
 const route = useRoute()
@@ -125,7 +122,7 @@ const form = reactive({
   gender: ['all'],
   memberLevels: ['all'],
   cityMode: 'all',
-  cities: [],
+  regionCodes: [],
   registerEnabled: false,
   registerType: 'unlimited',
   registerRange: [],

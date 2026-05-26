@@ -1,6 +1,5 @@
 <template>
   <div v-loading="loading" class="order-panel">
-    <!-- 搜索栏 -->
     <el-card shadow="never" class="panel-card">
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="商品">
@@ -40,7 +39,6 @@
       </el-form>
     </el-card>
 
-    <!-- 快捷按钮 -->
     <el-card shadow="never" class="panel-card">
       <div class="batch-actions">
         <el-checkbox v-model="selectAll" @change="handleSelectAll">全选</el-checkbox>
@@ -49,23 +47,29 @@
             <el-button type="primary" size="small">合并订单</el-button>
             <el-button type="primary" size="small">下载配货单</el-button>
             <el-button type="primary" size="small">打印发货单</el-button>
-            <el-button type="primary" size="small">打印快递单</el-button>
+            <el-button
+              type="primary"
+              size="small"
+              :disabled="!selectedRows.length"
+              @click="openExpressPrint()"
+            >
+              打印快递单
+            </el-button>
             <el-button type="primary" size="small">批量发货</el-button>
             <el-button type="primary" size="small">导出订单</el-button>
           </template>
           <template v-else>
-            <el-button type="success" size="small">批量确定收货</el-button>
+            <el-button type="success" size="small" @click="handleBatchConfirm">批量确定收货</el-button>
             <el-button type="primary" size="small">导出订单</el-button>
           </template>
         </div>
       </div>
     </el-card>
 
-    <!-- 状态 Tabs -->
     <el-card shadow="never" class="panel-card">
-      <el-tabs v-model="orderListData.activeTab" @tab-change="fetchOrderList">
+      <el-tabs v-model="orderListData.activeTab" @tab-change="onTabChange">
         <el-tab-pane
-          v-for="tab in orderStatusTabs"
+          v-for="tab in statusTabs"
           :key="tab.key"
           :name="tab.key"
           :label="`${tab.label}(${tab.count})`"
@@ -73,7 +77,6 @@
       </el-tabs>
     </el-card>
 
-    <!-- 数据表格 -->
     <el-card shadow="never" class="panel-card table-card">
       <el-table
         ref="tableRef"
@@ -176,11 +179,18 @@
               >
                 退款
               </el-button>
+              <el-button
+                v-if="row.orderStatus === 'pending_ship' || row.orderStatus === 'shipped'"
+                type="primary"
+                size="small"
+                plain
+                @click="openExpressPrint(row)"
+              >
+                快递单
+              </el-button>
             </template>
             <template v-else>
-              <el-button type="success" size="small" plain @click="handleConfirm(row)">
-                确认收货
-              </el-button>
+              <el-button type="success" size="small" plain @click="handleConfirm(row)">确认收货</el-button>
             </template>
           </template>
         </el-table-column>
@@ -198,22 +208,29 @@
           :total="orderListData.pagination.total"
           layout="prev, pager, next, sizes"
           background
+          @current-change="fetchOrderList"
+          @size-change="onPageSizeChange"
         />
       </div>
     </el-card>
+
+    <ExpressWaybillDialog ref="expressDialogRef" />
   </div>
 </template>
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
+import ExpressWaybillDialog from '@/components/express/ExpressWaybillDialog.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { orderStatusLabel, shipStatusLabel } from '@/mock/order'
 import {
-  orderStatusTabs,
-  orderStatusLabel,
-  shipStatusLabel,
-  mockOrderList,
-} from '@/mock/order'
+  batchConfirmOrders,
+  confirmOrder,
+  fetchOrderList as loadOrderList,
+  refundOrder,
+  shipOrder,
+} from '@/api/order'
 
 const props = defineProps({
   pageType: {
@@ -227,7 +244,9 @@ const router = useRouter()
 const loading = ref(false)
 const selectAll = ref(false)
 const tableRef = ref(null)
+const expressDialogRef = ref(null)
 const selectedRows = ref([])
+const statusTabs = ref([])
 
 const searchForm = reactive({
   product: '',
@@ -235,40 +254,63 @@ const searchForm = reactive({
   logisticsNo: '',
   phone: '',
   timeType: 'create',
-  dateRange: ['2024-08-02', '2024-08-23'],
+  dateRange: null,
 })
 
 const orderListData = reactive({
-  activeTab: 'pending_ship',
+  activeTab: props.pageType === 'confirm' ? 'shipped' : 'pending_ship',
   list: [],
   pagination: {
     page: 1,
     pageSize: 10,
-    total: 265,
-    totalPages: 10,
+    total: 0,
+    totalPages: 0,
   },
 })
 
-/**
- * 获取订单列表
- * 此处后续对接 Spring Boot 的 /api/order/list 接口
- */
+const buildQuery = () => ({
+  product: searchForm.product || undefined,
+  orderId: searchForm.orderId || undefined,
+  logisticsNo: searchForm.logisticsNo || undefined,
+  phone: searchForm.phone || undefined,
+  timeType: searchForm.timeType,
+  startDate: searchForm.dateRange?.[0],
+  endDate: searchForm.dateRange?.[1],
+  status: orderListData.activeTab,
+  pageType: props.pageType,
+  page: orderListData.pagination.page,
+  pageSize: orderListData.pagination.pageSize,
+})
+
 const fetchOrderList = async () => {
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    orderListData.list = [...mockOrderList]
-    orderListData.pagination.total = 265
-    orderListData.pagination.totalPages = Math.ceil(265 / orderListData.pagination.pageSize)
+    const data = await loadOrderList(buildQuery())
+    orderListData.list = data.list
+    orderListData.pagination.total = data.total
+    orderListData.pagination.totalPages = data.totalPages
+    statusTabs.value = data.tabs || []
+    if (data.activeTab) {
+      orderListData.activeTab = data.activeTab
+    }
   } finally {
     loading.value = false
   }
 }
 
+const onPageSizeChange = () => {
+  orderListData.pagination.page = 1
+  fetchOrderList()
+}
+
+const onTabChange = () => {
+  orderListData.pagination.page = 1
+  fetchOrderList()
+}
+
 const handleSearch = () => {
   orderListData.pagination.page = 1
   fetchOrderList()
-  ElMessage.success('查询成功')
 }
 
 const handleReset = () => {
@@ -278,8 +320,9 @@ const handleReset = () => {
     logisticsNo: '',
     phone: '',
     timeType: 'create',
-    dateRange: ['2024-08-02', '2024-08-23'],
+    dateRange: null,
   })
+  orderListData.pagination.page = 1
   fetchOrderList()
 }
 
@@ -288,7 +331,7 @@ const handleSelectionChange = (rows) => {
   selectAll.value = rows.length === orderListData.list.length && rows.length > 0
 }
 
-const handleSelectAll = (val) => {
+const handleSelectAll = () => {
   tableRef.value?.toggleAllSelection()
 }
 
@@ -296,21 +339,62 @@ const handleView = (row) => {
   router.push({ path: `/order/detail/${row.id}` })
 }
 
+const openExpressPrint = (row) => {
+  const target = row || selectedRows.value[0]
+  if (!target) {
+    ElMessage.warning('请先选择订单')
+    return
+  }
+  if (target.orderStatus === 'pending_payment') {
+    ElMessage.warning('待付款订单无法打印快递单')
+    return
+  }
+  expressDialogRef.value?.open(target.id)
+}
+
 const handleShip = (row) => {
   ElMessageBox.confirm(`确定对订单 ${row.id} 发货吗？`, '发货确认', { type: 'info' })
-    .then(() => ElMessage.success('发货成功'))
+    .then(async () => {
+      await shipOrder(row.id)
+      ElMessage.success('发货成功')
+      fetchOrderList()
+      expressDialogRef.value?.open(row.id)
+    })
     .catch(() => {})
 }
 
 const handleRefund = (row) => {
-  ElMessageBox.confirm(`确定对订单 ${row.id} 退款吗？`, '退款确认', { type: 'warning' })
-    .then(() => ElMessage.success('退款申请已提交'))
+  ElMessageBox.confirm(`确定对订单 ${row.id} 发起退款吗？`, '退款确认', { type: 'warning' })
+    .then(async () => {
+      await refundOrder(row.id)
+      ElMessage.success('退款申请已提交')
+      fetchOrderList()
+    })
     .catch(() => {})
 }
 
 const handleConfirm = (row) => {
   ElMessageBox.confirm(`确定对订单 ${row.id} 确认收货吗？`, '确认收货', { type: 'info' })
-    .then(() => ElMessage.success('已确认收货'))
+    .then(async () => {
+      await confirmOrder(row.id)
+      ElMessage.success('已确认收货')
+      fetchOrderList()
+    })
+    .catch(() => {})
+}
+
+const handleBatchConfirm = () => {
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请先选择订单')
+    return
+  }
+  const ids = selectedRows.value.map((r) => r.id)
+  ElMessageBox.confirm(`确定批量确认 ${ids.length} 个订单收货吗？`, '批量确认收货', { type: 'info' })
+    .then(async () => {
+      await batchConfirmOrders(ids)
+      ElMessage.success('批量确认收货成功')
+      fetchOrderList()
+    })
     .catch(() => {})
 }
 

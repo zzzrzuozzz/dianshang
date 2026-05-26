@@ -17,4 +17,6 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     long countByDeletedFalseAndAuditStatus(String auditStatus);
 
     long countByDeletedFalseAndAuditStatusIn(java.util.Collection<String> statuses);
+
+    java.util.Optional<Product> findTopByDeletedFalseOrderByIdDesc();
 }

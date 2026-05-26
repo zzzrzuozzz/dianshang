@@ -6,6 +6,15 @@
       </el-checkbox-group>
     </el-form-item>
 
+    <el-form-item label="限制地区">
+      <AreaCascader
+        v-model="form.regions"
+        multiple
+        placeholder="不选则面向全国；可多选省/市/区"
+      />
+      <p class="region-tip">良性调联：按需懒加载区划，用于秒杀/短信等地域圈选（示例字段）</p>
+    </el-form-item>
+
     <el-form-item label="推送标签">
       <el-link type="primary" class="tag-link" @click="$emit('edit-tags')">新增/编辑标签 &gt;</el-link>
       <div v-for="group in tagGroups" :key="group.key" class="tag-row">
@@ -20,6 +29,7 @@
 </template>
 
 <script setup>
+import AreaCascader from '@/components/AreaCascader/index.vue'
 import { memberLevelOptions, tagGroups } from '@/mock/ops'
 
 defineProps({
@@ -38,4 +48,5 @@ const onTagsChange = () => {
 .tag-row { display: flex; flex-wrap: wrap; align-items: flex-start; margin-bottom: 10px; font-size: 13px; }
 .tag-label { min-width: 110px; color: #606266; line-height: 32px; }
 .estimate-tip { color: #f56c6c; font-size: 13px; margin: 8px 0 0; }
+.region-tip { color: #909399; font-size: 12px; margin: 6px 0 0; line-height: 1.4; }
 </style>

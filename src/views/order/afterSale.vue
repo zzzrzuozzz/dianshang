@@ -39,9 +39,9 @@
     </el-card>
 
     <el-card shadow="never" class="panel-card">
-      <el-tabs v-model="activeTab" @tab-change="fetchAfterSaleList">
+      <el-tabs v-model="activeTab" @tab-change="onTabChange">
         <el-tab-pane
-          v-for="tab in afterSaleStatusTabs"
+          v-for="tab in statusTabs"
           :key="tab.key"
           :name="tab.key"
           :label="`${tab.label}(${tab.count})`"
@@ -91,7 +91,7 @@
 
         <el-table-column prop="refundAmount" label="退款金额" width="90" align="center">
           <template #default="{ row }">
-            {{ row.refundAmount.toFixed(2) }}
+            {{ Number(row.refundAmount).toFixed(2) }}
           </template>
         </el-table-column>
 
@@ -120,6 +120,8 @@
           :total="pagination.total"
           layout="prev, pager, next, sizes"
           background
+          @current-change="fetchAfterSaleList"
+          @size-change="onPageSizeChange"
         />
       </div>
     </el-card>
@@ -129,19 +131,14 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import {
-  afterSaleStatusTabs,
-  orderStatusLabel,
-  shipStatusLabel,
-  afterSaleTypeLabel,
-  mockAfterSaleList,
-} from '@/mock/order'
+import { orderStatusLabel, shipStatusLabel, afterSaleTypeLabel } from '@/mock/order'
+import { fetchAfterSaleList as loadAfterSaleList } from '@/api/order'
 
 const router = useRouter()
 const loading = ref(false)
 const activeTab = ref('platform_pending')
 const tableData = ref([])
+const statusTabs = ref([])
 
 const afterSaleStatusLabel = {
   platform_pending: '待平台处理',
@@ -157,37 +154,54 @@ const searchForm = reactive({
   orderId: '',
   logisticsNo: '',
   afterSaleId: '',
-  timeType: 'create',
-  dateRange: ['2024-08-02', '2024-08-23'],
+  timeType: 'apply',
+  dateRange: null,
 })
 
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 265,
-  totalPages: 10,
+  total: 0,
+  totalPages: 0,
 })
 
-/**
- * 获取售后列表
- * 此处后续对接 Spring Boot 后端 /api/order/after-sale/list 接口
- */
 const fetchAfterSaleList = async () => {
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    tableData.value = [...mockAfterSaleList]
-    pagination.total = 265
-    pagination.totalPages = Math.ceil(265 / pagination.pageSize)
+    const data = await loadAfterSaleList({
+      product: searchForm.product || undefined,
+      orderId: searchForm.orderId || undefined,
+      logisticsNo: searchForm.logisticsNo || undefined,
+      afterSaleId: searchForm.afterSaleId || undefined,
+      timeType: searchForm.timeType,
+      startDate: searchForm.dateRange?.[0],
+      endDate: searchForm.dateRange?.[1],
+      status: activeTab.value,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
+    statusTabs.value = data.tabs || []
   } finally {
     loading.value = false
   }
 }
 
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchAfterSaleList()
+}
+
+const onTabChange = () => {
+  pagination.page = 1
+  fetchAfterSaleList()
+}
+
 const handleSearch = () => {
   pagination.page = 1
   fetchAfterSaleList()
-  ElMessage.success('查询成功')
 }
 
 const handleReset = () => {
@@ -196,9 +210,10 @@ const handleReset = () => {
     orderId: '',
     logisticsNo: '',
     afterSaleId: '',
-    timeType: 'create',
-    dateRange: ['2024-08-02', '2024-08-23'],
+    timeType: 'apply',
+    dateRange: null,
   })
+  pagination.page = 1
   fetchAfterSaleList()
 }
 

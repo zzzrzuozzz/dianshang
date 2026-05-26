@@ -8,7 +8,9 @@
           <el-button v-if="hasAction('contact')" type="success" size="small">联系用户</el-button>
           <el-button v-if="hasAction('download')" type="primary" size="small">下载配货单</el-button>
           <el-button v-if="hasAction('printShip')" type="primary" size="small">打印发货单</el-button>
-          <el-button v-if="hasAction('printExpress')" type="primary" size="small">打印快递单</el-button>
+          <el-button v-if="hasAction('printExpress')" type="primary" size="small" @click="openExpressPrint">
+            打印快递单
+          </el-button>
           <el-button v-if="hasAction('export')" type="primary" size="small">导出订单</el-button>
           <el-button v-if="hasAction('reship')" type="primary" size="small">重新发货</el-button>
           <el-button v-if="hasAction('close')" type="danger" size="small">关闭订单</el-button>
@@ -239,16 +241,26 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <ExpressWaybillDialog ref="expressDialogRef" />
   </div>
 </template>
 
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getMockOrderDetail, resolveDemoStatus } from '@/mock/order'
+import { fetchOrderDetail } from '@/api/order'
+import ExpressWaybillDialog from '@/components/express/ExpressWaybillDialog.vue'
 
 const route = useRoute()
 const loading = ref(false)
+const expressDialogRef = ref(null)
+
+const openExpressPrint = () => {
+  if (orderInfo.id) {
+    expressDialogRef.value?.open(orderInfo.id)
+  }
+}
 
 const orderInfo = reactive({
   id: '',
@@ -327,10 +339,14 @@ const statusClass = (status) => {
 const getOrderDetail = async (orderId) => {
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    const status = route.query.status || resolveDemoStatus(orderId)
-    const data = getMockOrderDetail(orderId, status)
-    Object.assign(orderInfo, data)
+    const data = await fetchOrderDetail(orderId)
+    Object.assign(orderInfo, {
+      ...data,
+      products: data.products || [],
+      steps: data.steps || [],
+      actions: data.actions || [],
+      payment: data.payment || orderInfo.payment,
+    })
   } finally {
     loading.value = false
   }

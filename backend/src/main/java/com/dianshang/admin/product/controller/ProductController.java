@@ -32,6 +32,22 @@ public class ProductController {
         this.commentService = commentService;
     }
 
+    @GetMapping("/{productNo}")
+    public ApiResponse<ProductDetailVO> detail(@PathVariable String productNo) {
+        return ApiResponse.ok(productService.getDetail(productNo));
+    }
+
+    @PostMapping
+    public ApiResponse<ProductSaveResultVO> create(@Valid @RequestBody ProductSaveRequest request) {
+        return ApiResponse.ok(productService.create(request));
+    }
+
+    @PutMapping("/{productNo}")
+    public ApiResponse<ProductSaveResultVO> update(@PathVariable String productNo,
+                                                   @Valid @RequestBody ProductSaveRequest request) {
+        return ApiResponse.ok(productService.update(productNo, request));
+    }
+
     @GetMapping("/list")
     public ApiResponse<ProductPageVO> list(
             @RequestParam(required = false) String keyword,
