@@ -49,15 +49,15 @@
             <el-button type="primary" :icon="Plus" @click="router.push('/product/add')">
               添加商品
             </el-button>
-            <el-button type="success" :icon="Top">批量上架</el-button>
-            <el-button type="warning" :icon="Bottom">批量下架</el-button>
-            <el-button type="danger" :icon="Delete">批量删除</el-button>
+            <el-button type="success" :icon="Top" @click="handleBatchOn">批量上架</el-button>
+            <el-button type="warning" :icon="Bottom" @click="handleBatchOff">批量下架</el-button>
+            <el-button type="danger" :icon="Delete" @click="handleBatchDelete">批量删除</el-button>
           </template>
           <template v-else>
             <el-button type="primary" :icon="Plus" @click="router.push('/product/add')">
               添加商品
             </el-button>
-            <el-button type="success" :icon="Select">批量审核</el-button>
+            <el-button type="success" :icon="Select" @click="handleBatchAudit">批量审核</el-button>
           </template>
         </div>
       </div>
@@ -177,6 +177,8 @@
               :total="pagination.total"
               layout="prev, pager, next, sizes"
               background
+              @current-change="fetchData"
+              @size-change="onPageSizeChange"
             />
           </div>
         </div>
@@ -190,17 +192,22 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Top, Bottom, Delete, Select } from '@element-plus/icons-vue'
+import { auditStatusMap } from '@/mock/product'
 import {
-  categoryTreeData,
-  categoryOptions,
-  mockProductList,
-  auditStatusMap,
-  listStatusTabs,
-  auditStatusTabs,
-} from '@/mock/product'
+  auditProduct,
+  batchAuditProduct,
+  batchDeleteProduct,
+  batchProductOff,
+  batchProductOn,
+  deleteProduct,
+  fetchCategoryOptions,
+  fetchCategoryTree,
+  fetchProductAuditList,
+  fetchProductList,
+  updateProductStatus,
+} from '@/api/product'
 
 const props = defineProps({
-  /** list | audit */
   pageType: {
     type: String,
     default: 'list',
@@ -213,8 +220,9 @@ const loading = ref(false)
 const activeTab = ref('all')
 const tableData = ref([])
 const selectedRows = ref([])
-
-const statusTabs = props.pageType === 'list' ? listStatusTabs : auditStatusTabs
+const statusTabs = ref([])
+const categoryTreeData = ref([])
+const categoryOptions = ref([])
 
 const searchForm = reactive({
   keyword: '',
@@ -224,30 +232,44 @@ const searchForm = reactive({
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 200,
+  total: 0,
 })
 
-/**
- * 获取商品列表/审核数据
- * 此处后续使用 axios 请求 Spring Boot 后端接口
- * 列表: GET /api/product/list
- * 审核: GET /api/product/audit/list
- */
+const loadMeta = async () => {
+  const [tree, options] = await Promise.all([fetchCategoryTree(), fetchCategoryOptions()])
+  categoryTreeData.value = tree
+  categoryOptions.value = options
+}
+
 const fetchData = async () => {
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    tableData.value = [...mockProductList]
-    pagination.total = props.pageType === 'list' ? 1800 : 200
+    const params = {
+      keyword: searchForm.keyword || undefined,
+      category: searchForm.category || undefined,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }
+    const data =
+      props.pageType === 'list'
+        ? await fetchProductList({ ...params, status: activeTab.value })
+        : await fetchProductAuditList({ ...params, auditStatus: activeTab.value })
+    tableData.value = data.list
+    pagination.total = data.total
+    statusTabs.value = data.tabs || []
   } finally {
     loading.value = false
   }
 }
 
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchData()
+}
+
 const handleSearch = () => {
   pagination.page = 1
   fetchData()
-  ElMessage.success('查询成功')
 }
 
 const handleReset = () => {
@@ -266,9 +288,20 @@ const handleSelectionChange = (rows) => {
   selectedRows.value = rows
 }
 
-const toggleStatus = (row) => {
-  row.status = row.status === 'on' ? 'off' : 'on'
-  ElMessage.success(row.status === 'on' ? '已上架' : '已下架')
+const requireSelection = () => {
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请先选择商品')
+    return null
+  }
+  return selectedRows.value.map((r) => r.id)
+}
+
+const toggleStatus = async (row) => {
+  const next = row.status === 'on' ? 'off' : 'on'
+  await updateProductStatus(row.id, next)
+  row.status = next
+  ElMessage.success(next === 'on' ? '已上架' : '已下架')
+  fetchData()
 }
 
 const handleEdit = (row) => {
@@ -277,7 +310,39 @@ const handleEdit = (row) => {
 
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除商品 ${row.id} 吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteProduct(row.id)
+      ElMessage.success('删除成功')
+      fetchData()
+    })
+    .catch(() => {})
+}
+
+const handleBatchOn = async () => {
+  const ids = requireSelection()
+  if (!ids) return
+  await batchProductOn(ids)
+  ElMessage.success('批量上架成功')
+  fetchData()
+}
+
+const handleBatchOff = async () => {
+  const ids = requireSelection()
+  if (!ids) return
+  await batchProductOff(ids)
+  ElMessage.success('批量下架成功')
+  fetchData()
+}
+
+const handleBatchDelete = () => {
+  const ids = requireSelection()
+  if (!ids) return
+  ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个商品吗？`, '提示', { type: 'warning' })
+    .then(async () => {
+      await batchDeleteProduct(ids)
+      ElMessage.success('批量删除成功')
+      fetchData()
+    })
     .catch(() => {})
 }
 
@@ -292,20 +357,47 @@ const handleAudit = (row) => {
     distinguishCancelAndClose: true,
     type: 'info',
   })
-    .then(() => {
-      row.auditStatus = 'passed'
+    .then(async () => {
+      await auditProduct(row.id, true)
       ElMessage.success('审核通过')
+      fetchData()
     })
-    .catch((action) => {
+    .catch(async (action) => {
       if (action === 'cancel') {
-        row.auditStatus = 'rejected'
-        row.remark = '审核未通过'
+        await auditProduct(row.id, false, '审核未通过')
         ElMessage.warning('已驳回')
+        fetchData()
       }
     })
 }
 
-onMounted(fetchData)
+const handleBatchAudit = () => {
+  const ids = requireSelection()
+  if (!ids) return
+  ElMessageBox.confirm('批量通过选中商品的审核？', '批量审核', {
+    confirmButtonText: '通过',
+    cancelButtonText: '驳回',
+    distinguishCancelAndClose: true,
+    type: 'info',
+  })
+    .then(async () => {
+      await batchAuditProduct(ids, true)
+      ElMessage.success('批量审核通过')
+      fetchData()
+    })
+    .catch(async (action) => {
+      if (action === 'cancel') {
+        await batchAuditProduct(ids, false)
+        ElMessage.warning('已批量驳回')
+        fetchData()
+      }
+    })
+}
+
+onMounted(async () => {
+  await loadMeta()
+  await fetchData()
+})
 </script>
 
 <style scoped>

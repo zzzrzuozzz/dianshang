@@ -1,0 +1,1 @@
+import{_ as c,I as o,j as t,m as s,P as n}from"./index-DOleMjD7.js";const r={},_={class:"recycle-page"};function a(p,l){const e=n("el-empty");return o(),t("div",_,[s(e,{description:"回收站功能开发中"})])}const m=c(r,[["render",a],["__scopeId","data-v-b5b7c56c"]]);export{m as default};

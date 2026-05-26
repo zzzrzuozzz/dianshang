@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { getToken } from '@/utils/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,6 +25,12 @@ const router = createRouter({
           name: 'Dashboard',
           component: () => import('@/views/Dashboard.vue'),
           meta: { title: '首页' },
+        },
+        {
+          path: 'profile/index',
+          name: 'Profile',
+          component: () => import('@/views/profile/index.vue'),
+          meta: { title: '个人中心', subTitle: '账号设置' },
         },
         {
           path: 'product/list',
@@ -349,9 +356,46 @@ const router = createRouter({
           component: () => import('@/views/content/helpEdit.vue'),
           meta: { title: '内容管理', subTitle: '编辑帮助' },
         },
+        {
+          path: 'stats/transaction',
+          name: 'StatsTransaction',
+          component: () => import('@/views/stats/transaction.vue'),
+          meta: { title: '统计', subTitle: '交易统计' },
+        },
+        {
+          path: 'stats/flow',
+          name: 'StatsFlow',
+          component: () => import('@/views/stats/flow.vue'),
+          meta: { title: '统计', subTitle: '流量统计' },
+        },
+        {
+          path: 'stats/product',
+          name: 'StatsProduct',
+          component: () => import('@/views/stats/product.vue'),
+          meta: { title: '统计', subTitle: '商品统计' },
+        },
       ],
     },
   ],
+})
+
+const publicPaths = ['/login']
+
+router.beforeEach((to, _from, next) => {
+  const token = getToken()
+  if (publicPaths.includes(to.path)) {
+    if (token) {
+      next('/dashboard')
+    } else {
+      next()
+    }
+    return
+  }
+  if (!token) {
+    next({ path: '/login', query: { redirect: to.fullPath } })
+    return
+  }
+  next()
 })
 
 export default router

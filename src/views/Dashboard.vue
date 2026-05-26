@@ -92,21 +92,11 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue'
+import { reactive, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import {
-  Document,
-  User,
-  CreditCard,
-  Money,
-  Wallet,
-  Goods,
-  List,
-  DataAnalysis,
-  Promotion,
-  Setting,
-} from '@element-plus/icons-vue'
+import { fetchDashboardOverview } from '@/api/dashboard'
+import { resolveDashboardIcon } from '@/utils/dashboardIcons'
 
 const router = useRouter()
 const loading = ref(false)
@@ -125,141 +115,22 @@ const dashboardData = reactive({
   },
 })
 
-/**
- * 获取首页看板数据
- * 此处后续使用 axios 请求 Spring Boot 后端的 /api/dashboard/overview 接口
- */
+function mapOverviewItems(items) {
+  return items.map((item) => ({
+    ...item,
+    icon: resolveDashboardIcon(item.iconKey),
+  }))
+}
+
+/** GET /api/dashboard/overview */
 const fetchDashboardData = async () => {
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // Mock 数据 —— 联调后删除，改为接口赋值
-    Object.assign(dashboardData, {
-      stats: [
-        {
-          key: 'todayOrders',
-          label: '今日订单数',
-          value: 2654,
-          displayValue: '2,654',
-          trend: -50,
-          compareLabel: '较昨日',
-          icon: markRaw(Document),
-          iconBg: '#ecf5ff',
-          iconColor: '#409eff',
-        },
-        {
-          key: 'todayNewUsers',
-          label: '今日新增用户',
-          value: 1652,
-          displayValue: '1,652',
-          trend: -10,
-          compareLabel: '较昨日',
-          icon: markRaw(User),
-          iconBg: '#f0f9eb',
-          iconColor: '#67c23a',
-        },
-        {
-          key: 'pendingPayment',
-          label: '待付款订单',
-          value: 68,
-          displayValue: '68',
-          trend: 25,
-          compareLabel: '较昨日',
-          icon: markRaw(CreditCard),
-          iconBg: '#fdf6ec',
-          iconColor: '#e6a23c',
-        },
-        {
-          key: 'todaySales',
-          label: '今日销售额',
-          value: 65658.87,
-          displayValue: '¥65,658.87',
-          trend: 50,
-          compareLabel: '较昨日',
-          icon: markRaw(Money),
-          iconBg: '#fef0f0',
-          iconColor: '#f56c6c',
-        },
-        {
-          key: 'yesterdaySales',
-          label: '昨日销售额',
-          value: 45258.51,
-          displayValue: '¥45,258.51',
-          trend: 12,
-          compareLabel: '较前日',
-          icon: markRaw(Wallet),
-          iconBg: '#f4f4f5',
-          iconColor: '#909399',
-        },
-      ],
-      pendingTasks: [
-        { key: 'pendingShipment', label: '待发货订单', count: 154 },
-        { key: 'pendingRefund', label: '待处理退款', count: 1524 },
-        { key: 'pendingReceipt', label: '待确认收货', count: 16 },
-        { key: 'pendingAfterSale', label: '待处理售后', count: 24 },
-        { key: 'outOfStock', label: '缺货登记', count: 45 },
-        { key: 'pendingVerify', label: '待核销订单', count: 487 },
-        { key: 'pendingReview', label: '待评价回复', count: 25 },
-        { key: 'adExpire', label: '广告位到期提醒', count: 8 },
-      ],
-      quickAccess: [
-        {
-          key: 'products',
-          label: '商品管理',
-          path: '/product/list',
-          icon: markRaw(Goods),
-          iconBg: '#ecf5ff',
-          iconColor: '#409eff',
-        },
-        {
-          key: 'orders',
-          label: '订单管理',
-          path: '/orders',
-          icon: markRaw(List),
-          iconBg: '#f0f9eb',
-          iconColor: '#67c23a',
-        },
-        {
-          key: 'users',
-          label: '用户管理',
-          path: '/users',
-          icon: markRaw(User),
-          iconBg: '#fdf6ec',
-          iconColor: '#e6a23c',
-        },
-        {
-          key: 'statistics',
-          label: '交易统计',
-          path: '/statistics/transactions',
-          icon: markRaw(DataAnalysis),
-          iconBg: '#fef0f0',
-          iconColor: '#f56c6c',
-        },
-        {
-          key: 'marketing',
-          label: '广告管理',
-          path: '/marketing/ads',
-          icon: markRaw(Promotion),
-          iconBg: '#f4f4f5',
-          iconColor: '#909399',
-        },
-        {
-          key: 'settings',
-          label: '系统设置',
-          path: '/settings',
-          icon: markRaw(Setting),
-          iconBg: '#ecf5ff',
-          iconColor: '#409eff',
-        },
-      ],
-      chart: {
-        dates: ['07-22', '07-23', '07-24', '07-25', '07-26', '07-27', '07-28'],
-        sales: [32000, 45200, 38100, 52400, 48900, 61200, 65600],
-        orders: [180, 220, 195, 260, 240, 310, 265],
-      },
-    })
-
+    const data = await fetchDashboardOverview()
+    dashboardData.stats = mapOverviewItems(data.stats || [])
+    dashboardData.pendingTasks = data.pendingTasks || []
+    dashboardData.quickAccess = mapOverviewItems(data.quickAccess || [])
+    dashboardData.chart = data.chart || { dates: [], sales: [], orders: [] }
     await nextTick()
     renderChart()
   } finally {

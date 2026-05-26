@@ -76,6 +76,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock, Lightning } from '@element-plus/icons-vue'
+import { login } from '@/api/auth'
 
 interface LoginForm {
   username: string
@@ -104,9 +105,14 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 600))
+    await login({
+      username: loginForm.username.trim(),
+      password: loginForm.password,
+    })
     ElMessage.success('登录成功')
     router.push('/dashboard')
+  } catch {
+    /* 错误已由 request 拦截器提示 */
   } finally {
     loading.value = false
   }

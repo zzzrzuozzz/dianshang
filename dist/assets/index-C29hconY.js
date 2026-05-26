@@ -1,1 +1,0 @@
-import{P as t}from"./ProductDataPanel-RYc_A0EG.js";import{H as e,g as a}from"./index-BgOsTdPs.js";import"./product-CD3nDZvK.js";const _={__name:"index",setup(r){return(o,p)=>(e(),a(t,{"page-type":"list"}))}};export{_ as default};

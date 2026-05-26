@@ -1,0 +1,24 @@
+{
+  "pages": [
+    {
+      "path": "pages/message/index",
+      "style": {
+        "navigationBarTitleText": "消息中心",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/message/list",
+      "style": {
+        "navigationBarTitleText": "消息列表",
+        "enablePullDownRefresh": false
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "暴走电商",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f6f8"
+  }
+}

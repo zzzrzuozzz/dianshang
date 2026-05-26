@@ -1,0 +1,1 @@
+import{N as t}from"./NotificationListPanel-BNBv1MFs.js";import{I as e,h as o}from"./index-DOleMjD7.js";import"./ops-BlSeyq5X.js";const n={__name:"sms",setup(s){return(a,r)=>(e(),o(t,{"msg-type":"SMS","add-route":"/ops/sms/add","content-column-label":"短信内容","show-publish-status":!0,"show-receive-volume":!0,"action-width":200}))}};export{n as default};

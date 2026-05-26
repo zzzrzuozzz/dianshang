@@ -95,6 +95,8 @@
               :total="pagination.total"
               layout="prev, pager, next, sizes"
               background
+              @current-change="fetchData"
+              @size-change="onPageSizeChange"
             />
           </div>
         </div>
@@ -107,33 +109,45 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
-import { categoryTreeData } from '@/mock/product'
+import {
+  deleteCategory,
+  fetchCategoryList,
+  fetchCategoryTree,
+  updateCategoryVisible,
+} from '@/api/product'
 
 const loading = ref(false)
 const activeLevel = ref('1')
 const selected = ref([])
 const tableData = ref([])
+const categoryTreeData = ref([])
 
 const searchForm = reactive({ keyword: '' })
-const pagination = reactive({ page: 1, pageSize: 10, total: 300 })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 
-/**
- * 获取分类列表
- * 此处后续使用 axios 请求 Spring Boot 后端的 /api/product/category/list 接口
- */
+const loadTree = async () => {
+  categoryTreeData.value = await fetchCategoryTree()
+}
+
 const fetchData = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 300))
-    tableData.value = [
-      { id: '625543', name: '日用百货', level: '一级', count: 100, unit: '件', visible: true, sort: 1 },
-      { id: '625544', name: '母婴宠物', level: '一级', count: 80, unit: '件', visible: true, sort: 2 },
-      { id: '625545', name: '大牌', level: '一级', count: 60, unit: '件', visible: false, sort: 3 },
-      { id: '625546', name: '女装', level: '一级', count: 45, unit: '件', visible: true, sort: 4 },
-    ]
+    const data = await fetchCategoryList({
+      keyword: searchForm.keyword || undefined,
+      level: Number(activeLevel.value),
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
   } finally {
     loading.value = false
   }
+}
+
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchData()
 }
 
 const handleSearch = () => {
@@ -147,9 +161,11 @@ const handleReset = () => {
   fetchData()
 }
 
-const toggleVisible = (row) => {
-  row.visible = !row.visible
-  ElMessage.success(row.visible ? '已显示' : '已隐藏')
+const toggleVisible = async (row) => {
+  const next = !row.visible
+  await updateCategoryVisible(row.id, next)
+  row.visible = next
+  ElMessage.success(next ? '已显示' : '已隐藏')
 }
 
 const handleAddChild = (row) => ElMessage.info(`为 ${row.name} 新增下级分类`)
@@ -158,11 +174,19 @@ const handleTransfer = (row) => ElMessage.info(`转移 ${row.name} 下的商品`
 const handleEdit = (row) => ElMessage.info(`编辑分类 ${row.name}`)
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除分类 ${row.name} 吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteCategory(row.id)
+      ElMessage.success('删除成功')
+      fetchData()
+      loadTree()
+    })
     .catch(() => {})
 }
 
-onMounted(fetchData)
+onMounted(async () => {
+  await loadTree()
+  await fetchData()
+})
 </script>
 
 <style scoped>

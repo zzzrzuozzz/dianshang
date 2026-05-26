@@ -75,6 +75,8 @@
           :total="pagination.total"
           layout="prev, pager, next, sizes"
           background
+          @current-change="fetchData"
+          @size-change="onPageSizeChange"
         />
       </div>
     </el-card>
@@ -85,6 +87,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete } from '@element-plus/icons-vue'
+import { deleteBrand, fetchBrandList, updateBrandVisible } from '@/api/product'
 
 const loading = ref(false)
 const activeTab = ref('all')
@@ -92,25 +95,27 @@ const selected = ref([])
 const tableData = ref([])
 
 const searchForm = reactive({ keyword: '' })
-const pagination = reactive({ page: 1, pageSize: 10, total: 200 })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 
-/**
- * 获取品牌列表
- * 此处后续使用 axios 请求 Spring Boot 后端的 /api/product/brand/list 接口
- */
 const fetchData = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 300))
-    tableData.value = [
-      { id: 'B001', name: '华为', initial: 'H', count: 120, supplier: '自营', visible: true, sort: 1 },
-      { id: 'B002', name: '小米', initial: 'X', count: 98, supplier: '第三方', visible: true, sort: 2 },
-      { id: 'B003', name: '百事可乐', initial: 'B', count: 45, supplier: '自营', visible: false, sort: 3 },
-      { id: 'B004', name: '耐克', initial: 'N', count: 67, supplier: '第三方', visible: true, sort: 4 },
-    ]
+    const data = await fetchBrandList({
+      keyword: searchForm.keyword || undefined,
+      status: activeTab.value,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
   } finally {
     loading.value = false
   }
+}
+
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchData()
 }
 
 const handleSearch = () => {
@@ -124,15 +129,21 @@ const handleReset = () => {
   fetchData()
 }
 
-const toggleVisible = (row) => {
-  row.visible = !row.visible
-  ElMessage.success(row.visible ? '已显示' : '已隐藏')
+const toggleVisible = async (row) => {
+  const next = !row.visible
+  await updateBrandVisible(row.id, next)
+  row.visible = next
+  ElMessage.success(next ? '已显示' : '已隐藏')
 }
 
 const handleEdit = (row) => ElMessage.info(`编辑品牌 ${row.name}`)
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除品牌 ${row.name} 吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteBrand(row.id)
+      ElMessage.success('删除成功')
+      fetchData()
+    })
     .catch(() => {})
 }
 

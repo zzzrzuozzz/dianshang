@@ -104,6 +104,16 @@
             <el-menu-item index="/content/help">帮助</el-menu-item>
             <el-menu-item index="/content/help/type">帮助分类</el-menu-item>
           </el-sub-menu>
+
+          <el-sub-menu index="stats">
+            <template #title>
+              <el-icon><DataAnalysis /></el-icon>
+              <span>统计</span>
+            </template>
+            <el-menu-item index="/stats/transaction">交易统计</el-menu-item>
+            <el-menu-item index="/stats/flow">流量统计</el-menu-item>
+            <el-menu-item index="/stats/product">商品统计</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>
@@ -123,16 +133,23 @@
           <el-icon class="refresh-btn" @click="handleRefresh"><Refresh /></el-icon>
         </div>
         <div class="header-right">
-          <el-icon class="header-icon"><Search /></el-icon>
+          <GlobalSearch />
           <el-badge :value="99" :max="99" class="header-badge">
             <el-icon class="header-icon"><Bell /></el-icon>
           </el-badge>
-          <div class="user-info">
-            <el-avatar :size="32" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
-            <span class="username">admin</span>
-            <el-tag size="small" type="primary">管理员</el-tag>
-          </div>
-          <el-button size="small" @click="handleLogout">退出登录</el-button>
+          <el-dropdown trigger="click" @command="handleCommand">
+            <div class="avatar-wrapper">
+              <el-avatar :size="32" :src="headerUser.avatar" />
+              <span class="username">{{ headerUser.nickname || headerUser.username }}</span>
+              <el-icon class="caret-icon"><ArrowDown /></el-icon>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </el-header>
 
@@ -148,7 +165,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   HomeFilled,
@@ -160,14 +177,24 @@ import {
   Fold,
   Expand,
   Refresh,
-  Search,
   Bell,
   Document,
+  DataAnalysis,
+  ArrowDown,
 } from '@element-plus/icons-vue'
+import GlobalSearch from '@/components/layout/GlobalSearch.vue'
+import { getProfile } from '@/api/profile'
+import { clearToken } from '@/utils/auth'
 
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
+
+const headerUser = reactive({
+  username: 'admin',
+  nickname: '管理员',
+  avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+})
 
 const activeMenu = computed(() => route.path)
 
@@ -186,9 +213,33 @@ const handleRefresh = () => {
   router.replace({ path: '/redirect' + route.fullPath }).catch(() => {})
 }
 
+const handleCommand = (command) => {
+  if (command === 'profile') {
+    router.push('/profile/index')
+  } else if (command === 'logout') {
+    handleLogout()
+  }
+}
+
 const handleLogout = () => {
+  clearToken()
   router.push('/login')
 }
+
+const loadHeaderProfile = async () => {
+  try {
+    const data = await getProfile()
+    Object.assign(headerUser, {
+      username: data.username,
+      nickname: data.nickname,
+      avatar: data.avatar,
+    })
+  } catch {
+    /* 未登录或接口不可用时保留默认展示 */
+  }
+}
+
+onMounted(loadHeaderProfile)
 </script>
 
 <style scoped>
@@ -308,15 +359,32 @@ const handleLogout = () => {
   line-height: 1;
 }
 
-.user-info {
+.avatar-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.avatar-wrapper:hover {
+  background-color: #f5f7fa;
 }
 
 .username {
   font-size: 14px;
   color: #303133;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret-icon {
+  font-size: 12px;
+  color: #909399;
 }
 
 .admin-main {

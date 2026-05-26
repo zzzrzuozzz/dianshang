@@ -1,0 +1,1 @@
+import{O as t}from"./OrderListPanel-But_s85x.js";import{I as e,h as r}from"./index-DOleMjD7.js";import"./order-C8bnv4lr.js";const i={__name:"list",setup(a){return(o,s)=>(e(),r(t,{"page-type":"list"}))}};export{i as default};

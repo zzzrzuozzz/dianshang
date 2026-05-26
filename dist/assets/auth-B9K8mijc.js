@@ -1,0 +1,1 @@
+const e="admin_token";function s(o,t=!0){t?(localStorage.setItem(e,o),sessionStorage.removeItem(e)):(sessionStorage.setItem(e,o),localStorage.removeItem(e))}function a(){localStorage.removeItem(e),sessionStorage.removeItem(e)}export{a as c,s};

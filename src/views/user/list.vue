@@ -92,10 +92,11 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { mockUserList } from '@/mock/user'
 
+const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const activeTab = ref('all')
@@ -143,7 +144,11 @@ const goDetail = (row) => router.push(`/user/detail/${row.id}`)
 const goEdit = (row) => router.push(`/user/edit/${row.id}`)
 const handlePermission = (row) => router.push(`/user/edit/${row.id}`)
 
-onMounted(fetchUserList)
+onMounted(() => {
+  const q = route.query.search
+  if (q && typeof q === 'string') searchForm.account = q
+  fetchUserList()
+})
 </script>
 
 <style scoped>

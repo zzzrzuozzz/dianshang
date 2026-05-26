@@ -1,0 +1,1 @@
+import{H as o,I as s,j as c,a0 as n,a1 as u}from"./index-DOleMjD7.js";const d={__name:"Redirect",setup(p){const a=n(),r=u();return o(()=>{const e=a.params.path,t=Array.isArray(e)?`/${e.join("/")}`:e?`/${e}`:"/dashboard";r.replace(t)}),(e,t)=>(s(),c("div"))}};export{d as default};

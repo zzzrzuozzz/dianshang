@@ -21,9 +21,12 @@
         <el-card shadow="never" class="form-card">
           <el-form-item label="商品分类" prop="category">
             <el-select v-model="form.category" placeholder="请选择商品分类" style="width: 100%">
-              <el-option label="日用百货" value="daily" />
-              <el-option label="母婴宠物" value="baby" />
-              <el-option label="大牌" value="brand" />
+              <el-option
+                v-for="opt in categoryOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
             </el-select>
           </el-form-item>
 
@@ -37,9 +40,12 @@
 
           <el-form-item label="商品品牌" prop="brand">
             <el-select v-model="form.brand" placeholder="请选择品牌" style="width: 100%">
-              <el-option label="华为" value="huawei" />
-              <el-option label="小米" value="xiaomi" />
-              <el-option label="百事可乐" value="pepsi" />
+              <el-option
+                v-for="opt in brandOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
             </el-select>
           </el-form-item>
 
@@ -214,11 +220,14 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, VideoPlay } from '@element-plus/icons-vue'
+import { fetchBrandList, fetchCategoryOptions } from '@/api/product'
 
 const formRef = ref(null)
+const categoryOptions = ref([])
+const brandOptions = ref([])
 const currentStep = ref(0)
 
 const mockThumb =
@@ -259,6 +268,15 @@ const rules = {
 }
 
 const editorTools = ['B', 'I', 'U', 'S', '左', '中', '右', '列表', '图片', '链接']
+
+onMounted(async () => {
+  const [categories, brands] = await Promise.all([
+    fetchCategoryOptions(),
+    fetchBrandList({ page: 1, pageSize: 100, status: 'active' }),
+  ])
+  categoryOptions.value = categories
+  brandOptions.value = brands.list.map((b) => ({ label: b.name, value: b.id }))
+})
 
 const mockUpload = (field) => {
   if (field === 'mainImages') {

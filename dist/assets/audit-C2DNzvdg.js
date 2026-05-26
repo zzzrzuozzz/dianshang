@@ -1,0 +1,1 @@
+import{P as t}from"./ProductDataPanel-DpqwZqs6.js";import{I as a,h as e}from"./index-DOleMjD7.js";import"./product-CD3nDZvK.js";const m={__name:"audit",setup(r){return(o,p)=>(a(),e(t,{"page-type":"audit"}))}};export{m as default};

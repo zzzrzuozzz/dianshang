@@ -141,6 +141,8 @@
               :total="pagination.total"
               layout="prev, pager, next, sizes"
               background
+              @current-change="fetchTableData"
+              @size-change="onPageSizeChange"
             />
           </div>
         </div>
@@ -153,109 +155,61 @@
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
-import { categoryTreeData } from '@/mock/product'
+import {
+  deleteComment,
+  featureComment,
+  fetchCategoryTree,
+  fetchCommentList,
+  fetchCommentOverview,
+} from '@/api/product'
 
 const loading = ref(false)
 const activeTab = ref('all')
 const selected = ref([])
 const tableData = ref([])
+const categoryTreeData = ref([])
 
 const ratingLabel = { good: '好评', neutral: '中评', bad: '差评' }
 
-const ratingTabs = [
-  { key: 'all', label: '全部', count: 200 },
-  { key: 'good', label: '好评', count: 120 },
-  { key: 'neutral', label: '中评', count: 60 },
-  { key: 'bad', label: '差评', count: 20 },
-]
+const ratingTabs = ref([])
 
 const searchForm = reactive({ keyword: '' })
 
-const pagination = reactive({ page: 1, pageSize: 10, total: 200 })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
 
 const dashboardData = reactive({
   stats: [],
 })
 
-const thumb =
-  'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-
-/**
- * 获取评价看板数据
- * 此处后续使用 axios 请求 Spring Boot 后端的 /api/product/comment/overview 接口
- */
 const fetchDashboardData = async () => {
-  await new Promise((r) => setTimeout(r, 300))
-  dashboardData.stats = [
-    { key: 'badReply', label: '待回复差评', value: '10', action: '去回复 >', todayNew: 0 },
-    { key: 'neutralReply', label: '待回复中评', value: '6', action: '去回复 >', todayNew: 2 },
-    { key: 'feature', label: '可加精评论', value: '20', action: '去加精 >', todayNew: 3 },
-    { key: 'goodRate', label: '近30天评价好评率', value: '80.01%', trend: -5 },
-    { key: 'badRate', label: '近30天差评率', value: '0.50%', trend: 20 },
-    { key: 'neutralRate', label: '近30天评价中评率', value: '1.50%', trend: 10 },
-  ]
+  const data = await fetchCommentOverview()
+  dashboardData.stats = data.stats || []
 }
 
 const fetchTableData = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 300))
-    tableData.value = [
-      {
-        id: '025342',
-        title: '2024新款夏季纯棉T恤 男女同款',
-        thumb,
-        rating: 'good',
-        content: '挺好的，不错，穿着很舒服',
-        originalPrice: 56,
-        discountPrice: 36,
-        status: 'on',
-        sku: 'SKU-001',
-        sort: 1,
-        stock: 1200,
-        sales: 2555,
-        totalGood: 120,
-        totalNeutral: 8,
-        totalBad: 2,
-      },
-      {
-        id: '025343',
-        title: '进口全脂纯牛奶 1L*12盒',
-        thumb,
-        rating: 'neutral',
-        content: '一般般，包装还可以',
-        originalPrice: 89,
-        discountPrice: 69,
-        status: 'on',
-        sku: 'SKU-002',
-        sort: 2,
-        stock: 800,
-        sales: 980,
-        totalGood: 45,
-        totalNeutral: 12,
-        totalBad: 3,
-      },
-      {
-        id: '025344',
-        title: '加厚垃圾袋 家用厨房一次性',
-        thumb,
-        rating: 'bad',
-        content: '质量不太好，容易破',
-        originalPrice: 19.9,
-        discountPrice: 12.9,
-        status: 'off',
-        sku: 'SKU-003',
-        sort: 3,
-        stock: 5000,
-        sales: 12000,
-        totalGood: 200,
-        totalNeutral: 15,
-        totalBad: 10,
-      },
-    ]
+    const data = await fetchCommentList({
+      keyword: searchForm.keyword || undefined,
+      rating: activeTab.value,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
+    ratingTabs.value = data.tabs || []
   } finally {
     loading.value = false
   }
+}
+
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchTableData()
+}
+
+const loadTree = async () => {
+  categoryTreeData.value = await fetchCategoryTree()
 }
 
 const handleSearch = () => {
@@ -274,16 +228,26 @@ const handleAction = (key) => {
 }
 
 const handleView = (row) => ElMessage.info(`查看商品 ${row.id} 的评价`)
-const handleFeature = (row) => ElMessage.success(`商品 ${row.id} 已加精`)
+const handleFeature = async (row) => {
+  await featureComment(row.id)
+  ElMessage.success(`商品 ${row.id} 已加精`)
+}
+
 const handleDelete = (row) => {
   ElMessageBox.confirm('确定删除该评价吗？', '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteComment(row.id)
+      ElMessage.success('删除成功')
+      fetchTableData()
+      fetchDashboardData()
+    })
     .catch(() => {})
 }
 
-onMounted(() => {
-  fetchDashboardData()
-  fetchTableData()
+onMounted(async () => {
+  await loadTree()
+  await fetchDashboardData()
+  await fetchTableData()
 })
 </script>
 
