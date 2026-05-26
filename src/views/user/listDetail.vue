@@ -90,7 +90,7 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMockUserDetail } from '@/mock/user'
+import { fetchUserDetail } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,8 +150,8 @@ const subStats = computed(() => [
 const getUserDetail = async (userId) => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    Object.assign(userInfo, getMockUserDetail(userId))
+    const data = await fetchUserDetail(userId)
+    Object.assign(userInfo, data)
   } finally {
     loading.value = false
   }

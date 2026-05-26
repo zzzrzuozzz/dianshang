@@ -11,7 +11,6 @@
       <el-button type="primary" link @click="clearGoodsFilter">查看全部</el-button>
     </el-alert>
 
-    <!-- 搜索栏 -->
     <el-card shadow="never" class="panel-card">
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="流水号/单号">
@@ -63,24 +62,20 @@
       </el-form>
     </el-card>
 
-    <!-- 导出 + Tabs -->
     <el-card shadow="never" class="panel-card">
       <div class="toolbar">
-        <el-tabs v-model="activeTab" @tab-change="fetchInventoryFlow">
-          <el-tab-pane label="全部" name="all">
-            <template #label>全部({{ tabCounts.all }})</template>
-          </el-tab-pane>
-          <el-tab-pane label="发货" name="sales_out" />
-          <el-tab-pane label="退货" name="return_in" />
-          <el-tab-pane label="手动出库" name="manual_out" />
-          <el-tab-pane label="手动入库" name="manual_in" />
-          <el-tab-pane label="补发" name="reissue" />
+        <el-tabs v-model="activeTab" @tab-change="onTabChange">
+          <el-tab-pane
+            v-for="tab in flowTabs"
+            :key="tab.key"
+            :name="tab.key"
+            :label="tabLabel(tab)"
+          />
         </el-tabs>
-        <el-button type="primary">导出数据</el-button>
+        <el-button type="primary" :loading="exporting" @click="handleExport">导出数据</el-button>
       </div>
     </el-card>
 
-    <!-- 流水表格 -->
     <el-card shadow="never" class="panel-card table-card">
       <el-table :data="tableData" border stripe>
         <el-table-column type="selection" width="48" align="center" />
@@ -148,6 +143,8 @@
           :total="pagination.total"
           layout="prev, pager, next, sizes"
           background
+          @current-change="fetchInventoryFlow"
+          @size-change="onPageSizeChange"
         />
       </div>
     </el-card>
@@ -158,62 +155,88 @@
 import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { mockInventoryFlow, flowTypeMap, flowTypeOptions } from '@/mock/inventory'
+import {
+  exportInventoryFlow,
+  fetchInventoryFlow as loadInventoryFlow,
+  flowTypeMap,
+  flowTypeOptions,
+} from '@/api/inventory'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
+const exporting = ref(false)
 const activeTab = ref('all')
 const tableData = ref([])
 
 const filterGoodsId = computed(() => route.query.goodsId || '')
 
-const tabCounts = reactive({ all: 265 })
+const flowTabs = ref([
+  { key: 'all', label: '全部', count: 0 },
+  { key: 'sales_out', label: '发货', count: 0 },
+  { key: 'return_in', label: '退货', count: 0 },
+  { key: 'manual_out', label: '手动出库', count: 0 },
+  { key: 'manual_in', label: '手动入库', count: 0 },
+  { key: 'reissue', label: '补发', count: 0 },
+])
 
 const searchForm = reactive({
   flowNo: '',
   product: '',
   bizType: '',
-  dateRange: ['2024-08-02', '2024-08-23'],
+  dateRange: null,
 })
 
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 265,
-  totalPages: 10,
+  total: 0,
+  totalPages: 1,
 })
 
-/**
- * 获取库存流水明细
- * 此处后续使用 axios 请求 Spring Boot 后端的 /api/inventory/flow 接口
- */
+const tabLabel = (tab) => (tab.key === 'all' ? `全部(${tab.count})` : tab.label)
+
+const buildQuery = () => ({
+  flowNo: searchForm.flowNo || undefined,
+  product: searchForm.product || undefined,
+  bizType: searchForm.bizType || undefined,
+  tab: activeTab.value,
+  goodsId: filterGoodsId.value || undefined,
+  startDate: searchForm.dateRange?.[0],
+  endDate: searchForm.dateRange?.[1],
+  page: pagination.page,
+  pageSize: pagination.pageSize,
+})
+
 const fetchInventoryFlow = async () => {
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    let list = [...mockInventoryFlow]
-    if (filterGoodsId.value) {
-      list = list.filter((item) => item.goodsId === filterGoodsId.value)
+    const data = await loadInventoryFlow(buildQuery())
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
+    if (data.tabs?.length) {
+      flowTabs.value = data.tabs
     }
-    if (activeTab.value !== 'all') {
-      list = list.filter((item) => item.type === activeTab.value)
-    }
-    if (searchForm.bizType) {
-      list = list.filter((item) => item.type === searchForm.bizType)
-    }
-    tableData.value = list
-    pagination.total = 265
-    pagination.totalPages = Math.ceil(pagination.total / pagination.pageSize)
   } finally {
     loading.value = false
   }
 }
 
+const onTabChange = () => {
+  pagination.page = 1
+  searchForm.bizType = ''
+  fetchInventoryFlow()
+}
+
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchInventoryFlow()
+}
+
 const handleSearch = () => {
   pagination.page = 1
   fetchInventoryFlow()
-  ElMessage.success('查询成功')
 }
 
 const handleReset = () => {
@@ -221,10 +244,24 @@ const handleReset = () => {
     flowNo: '',
     product: '',
     bizType: '',
-    dateRange: ['2024-08-02', '2024-08-23'],
+    dateRange: null,
   })
   activeTab.value = 'all'
+  pagination.page = 1
   fetchInventoryFlow()
+}
+
+const handleExport = async () => {
+  exporting.value = true
+  try {
+    const { page, pageSize, ...rest } = buildQuery()
+    await exportInventoryFlow(rest)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
 }
 
 const clearGoodsFilter = () => {
@@ -244,7 +281,7 @@ watch(
   () => {
     pagination.page = 1
     fetchInventoryFlow()
-  }
+  },
 )
 </script>
 

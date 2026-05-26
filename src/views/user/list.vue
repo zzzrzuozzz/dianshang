@@ -36,12 +36,12 @@
         <el-button type="primary" size="small">群发站内信</el-button>
         <el-button type="primary" size="small">APP推送</el-button>
         <el-button type="primary" size="small">设置标签</el-button>
-        <el-button type="primary" size="small">导出数据</el-button>
+        <el-button type="primary" size="small" @click="handleExport">导出数据</el-button>
       </div>
     </el-card>
 
     <el-card shadow="never" class="panel-card">
-      <el-tabs v-model="activeTab" @tab-change="fetchUserList">
+      <el-tabs v-model="activeTab" @tab-change="onTabChange">
         <el-tab-pane label="全部" name="all" />
         <el-tab-pane label="正常" name="normal" />
         <el-tab-pane label="禁止提现" name="withdraw_banned" />
@@ -57,7 +57,7 @@
         <el-table-column prop="account" label="用户账号" width="120" />
         <el-table-column prop="level" label="用户等级" width="100" align="center" />
         <el-table-column prop="consumeAmount" label="消费金额" width="100" align="center">
-          <template #default="{ row }">{{ row.consumeAmount.toFixed(2) }}</template>
+          <template #default="{ row }">{{ Number(row.consumeAmount).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column prop="orderCount" label="订单数量" width="90" align="center" />
         <el-table-column prop="points" label="可用积分" width="90" align="center" />
@@ -84,6 +84,8 @@
           :total="pagination.total"
           layout="prev, pager, next, sizes"
           background
+          @current-change="fetchUserList"
+          @size-change="onSizeChange"
         />
       </div>
     </el-card>
@@ -94,7 +96,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { mockUserList } from '@/mock/user'
+import { exportUserList, fetchUserList as getUserListApi } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,25 +109,40 @@ const searchForm = reactive({
   account: '',
   nickname: '',
   timeType: 'register',
-  dateRange: ['2024-08-02', '2024-08-23'],
+  dateRange: null,
 })
 
-const pagination = reactive({ page: 1, pageSize: 10, total: 265, totalPages: 10 })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0, totalPages: 0 })
 
-/**
- * 获取用户列表
- * GET /api/user/list
- */
 const fetchUserList = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    let list = [...mockUserList]
-    if (activeTab.value !== 'all') list = list.filter((u) => u.status === activeTab.value)
-    tableData.value = list
+    const [startDate, endDate] = searchForm.dateRange || []
+    const data = await getUserListApi({
+      account: searchForm.account || undefined,
+      nickname: searchForm.nickname || undefined,
+      tab: activeTab.value,
+      startDate,
+      endDate,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
   } finally {
     loading.value = false
   }
+}
+
+const onTabChange = () => {
+  pagination.page = 1
+  fetchUserList()
+}
+
+const onSizeChange = () => {
+  pagination.page = 1
+  fetchUserList()
 }
 
 const handleSearch = () => {
@@ -135,9 +152,23 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  Object.assign(searchForm, { account: '', nickname: '', dateRange: ['2024-08-02', '2024-08-23'] })
+  Object.assign(searchForm, { account: '', nickname: '', dateRange: null })
   activeTab.value = 'all'
+  pagination.page = 1
   fetchUserList()
+}
+
+const handleExport = async () => {
+  try {
+    await exportUserList({
+      account: searchForm.account || '',
+      nickname: searchForm.nickname || '',
+      tab: activeTab.value,
+    })
+    ElMessage.success('导出成功')
+  } catch {
+    /* handled */
+  }
 }
 
 const goDetail = (row) => router.push(`/user/detail/${row.id}`)

@@ -155,6 +155,11 @@ export function shipOrder(orderNo: string, data?: { logistics?: string; logistic
   return post(`/api/order/${orderNo}/ship`, data)
 }
 
+/** POST /api/order/{orderNo}/reissue — 补发（扣库存 + reissue 流水） */
+export function reissueOrder(orderNo: string, data?: { logistics?: string; logisticsNo?: string }) {
+  return post(`/api/order/${orderNo}/reissue`, data)
+}
+
 export function refundOrder(orderNo: string) {
   return post(`/api/order/${orderNo}/refund`)
 }

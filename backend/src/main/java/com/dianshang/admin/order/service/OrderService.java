@@ -7,6 +7,7 @@ import com.dianshang.admin.order.entity.AfterSaleEntity;
 import com.dianshang.admin.order.entity.OrderEntity;
 import com.dianshang.admin.order.repository.AfterSaleRepository;
 import com.dianshang.admin.order.repository.OrderRepository;
+import com.dianshang.admin.inventory.service.InventoryService;
 import com.dianshang.admin.order.support.OrderDetailAssembler;
 import com.dianshang.admin.order.support.OrderListMapper;
 import com.dianshang.admin.order.support.OrderSpecifications;
@@ -29,15 +30,18 @@ public class OrderService {
     private final AfterSaleRepository afterSaleRepository;
     private final OrderAddressService orderAddressService;
     private final ExpressTemplateService expressTemplateService;
+    private final InventoryService inventoryService;
 
     public OrderService(OrderRepository orderRepository,
                         AfterSaleRepository afterSaleRepository,
                         OrderAddressService orderAddressService,
-                        ExpressTemplateService expressTemplateService) {
+                        ExpressTemplateService expressTemplateService,
+                        InventoryService inventoryService) {
         this.orderRepository = orderRepository;
         this.afterSaleRepository = afterSaleRepository;
         this.orderAddressService = orderAddressService;
         this.expressTemplateService = expressTemplateService;
+        this.inventoryService = inventoryService;
     }
 
     public OrderPageVO list(String product, String orderId, String logisticsNo, String phone,
@@ -127,6 +131,7 @@ public class OrderService {
         }
         order.setDeliverySerial("FH" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + orderNo);
         orderRepository.save(order);
+        inventoryService.shipOutbound(order);
     }
 
     @Transactional
@@ -148,6 +153,31 @@ public class OrderService {
         afterSale.setRefundAmount(order.getActualAmount());
         afterSale.setApplyTime(LocalDateTime.now());
         afterSaleRepository.save(afterSale);
+        int qty = order.getQuantity() != null ? order.getQuantity() : 1;
+        inventoryService.returnInbound(order, qty);
+    }
+
+    @Transactional
+    public void reissue(String orderNo, ShipRequest request) {
+        OrderEntity order = requireOrder(orderNo);
+        if (!"shipped".equals(order.getOrderStatus()) && !"completed".equals(order.getOrderStatus())) {
+            throw new BusinessException("仅已发货或已完成订单可补发");
+        }
+        if (request != null && StringUtils.hasText(request.getLogistics())) {
+            order.setLogistics(request.getLogistics());
+            order.setLogisticsNo(request.getLogisticsNo());
+        } else {
+            var template = expressTemplateService.findDefault();
+            String company = template != null ? template.getExpressCompany() : "申通快递";
+            order.setLogistics(company + " (补发-" + orderNo + ")");
+            order.setLogisticsNo("ST-R" + orderNo);
+        }
+        if ("completed".equals(order.getOrderStatus())) {
+            order.setShipStatus("in_transit");
+        }
+        order.setDeliverySerial("FH-R" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + orderNo);
+        orderRepository.save(order);
+        inventoryService.reissueOutbound(order);
     }
 
     @Transactional

@@ -67,7 +67,12 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockTimeSlots } from '@/mock/promotion'
+import {
+  deleteSeckillTime,
+  fetchSeckillTimeList,
+  saveSeckillTime,
+  toggleSeckillTime,
+} from '@/api/promotion'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -92,8 +97,7 @@ const parseTime = (str) => {
 const fetchList = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 300))
-    tableData.value = mockTimeSlots.map((t) => ({ ...t }))
+    tableData.value = await fetchSeckillTimeList()
   } finally {
     loading.value = false
   }
@@ -111,23 +115,18 @@ const openDialog = (row) => {
   dialog.visible = true
 }
 
-/**
- * POST /api/promotion/seckill/time/save
- */
 const saveTimeInterval = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   dialog.saving = true
   try {
-    const payload = {
-      id: dialog.form.id,
+    await saveSeckillTime({
+      id: dialog.form.id || undefined,
       name: dialog.form.name,
       start: formatTime(dialog.form.startH, dialog.form.startM, dialog.form.startS),
       end: formatTime(dialog.form.endH, dialog.form.endM, dialog.form.endS),
       enabled: dialog.form.enabled,
-    }
-    // await axios.post('/api/promotion/seckill/time/save', payload)
-    await new Promise((r) => setTimeout(r, 400))
+    })
     ElMessage.success('保存成功')
     dialog.visible = false
     fetchList()
@@ -136,11 +135,18 @@ const saveTimeInterval = async () => {
   }
 }
 
-const toggleEnable = (row) => ElMessage.success(row.enabled ? '已开启' : '已关闭')
+const toggleEnable = async (row) => {
+  await toggleSeckillTime(row.id, row.enabled)
+  ElMessage.success(row.enabled ? '已开启' : '已关闭')
+}
 
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除「${row.name}」吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteSeckillTime(row.id)
+      ElMessage.success('删除成功')
+      fetchList()
+    })
     .catch(() => {})
 }
 

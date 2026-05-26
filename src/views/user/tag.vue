@@ -3,10 +3,7 @@
     <el-card shadow="never" class="panel-card">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="账号">
-          <el-input v-model="searchForm.account" placeholder="请输入手机号或ID" clearable style="width: 180px" />
-        </el-form-item>
-        <el-form-item label="昵称">
-          <el-input v-model="searchForm.nickname" placeholder="请输入昵称" clearable style="width: 160px" />
+          <el-input v-model="searchForm.keyword" placeholder="标签名称或编号" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item class="search-actions">
           <el-button @click="handleReset">重置</el-button>
@@ -41,10 +38,6 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination-bar">
-        <span>第{{ pagination.page }}页 共{{ pagination.totalPages }}页 {{ pagination.total }}条</span>
-        <el-pagination v-model:current-page="pagination.page" :total="pagination.total" layout="prev, pager, next, sizes" background />
-      </div>
     </el-card>
   </div>
 </template>
@@ -53,36 +46,38 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockTagList } from '@/mock/user'
+import { deleteTag, fetchTagList } from '@/api/user'
 
 const router = useRouter()
 const loading = ref(false)
 const tableData = ref([])
-const searchForm = reactive({ account: '', nickname: '' })
-const pagination = reactive({ page: 1, pageSize: 10, total: 265, totalPages: 10 })
+const searchForm = reactive({ keyword: '' })
 
-/** GET /api/user/tag/list */
-const fetchTagList = async () => {
+const fetchTagListData = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    tableData.value = [...mockTagList]
+    tableData.value = await fetchTagList({ keyword: searchForm.keyword || undefined })
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => { fetchTagList(); ElMessage.success('查询成功') }
-const handleReset = () => { searchForm.account = ''; searchForm.nickname = ''; fetchTagList() }
+const handleSearch = () => { fetchTagListData(); ElMessage.success('查询成功') }
+const handleReset = () => { searchForm.keyword = ''; fetchTagListData() }
 const goTagUsers = (row) => router.push({ path: '/user/tag/users', query: { tagId: row.id, tagName: row.name } })
 const goEdit = (row) => router.push(`/user/tag/edit/${row.id}`)
 const handleView = (row) => router.push(`/user/tag/edit/${row.id}`)
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除标签「${row.name}」吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功')).catch(() => {})
+    .then(async () => {
+      await deleteTag(row.id)
+      ElMessage.success('删除成功')
+      fetchTagListData()
+    })
+    .catch(() => {})
 }
 
-onMounted(fetchTagList)
+onMounted(fetchTagListData)
 </script>
 
 <style scoped>
@@ -92,5 +87,4 @@ onMounted(fetchTagList)
 .toolbar { display: flex; justify-content: space-between; align-items: center; }
 .btn-green { color: #67c23a; border-color: #c2e7b0; background: #f0f9eb; }
 .btn-red { color: #f56c6c; border-color: #fbc4c4; background: #fef0f0; }
-.pagination-bar { display: flex; justify-content: space-between; margin-top: 16px; font-size: 13px; color: #606266; }
 </style>

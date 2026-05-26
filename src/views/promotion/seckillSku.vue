@@ -5,7 +5,7 @@
         <span class="section-title">设置商品 - {{ timeName }}</span>
         <div>
           <el-button @click="router.back()">返回</el-button>
-          <el-button type="primary" @click="picker.visible = true">+ 添加商品</el-button>
+          <el-button type="primary" @click="openPicker">+ 添加商品</el-button>
           <el-button type="success" :loading="saving" @click="submitSeckillSku">保存配货</el-button>
         </div>
       </div>
@@ -17,7 +17,7 @@
         <el-table-column prop="name" label="商品名称" min-width="180" show-overflow-tooltip />
         <el-table-column prop="productCode" label="商品编号" width="110" />
         <el-table-column label="商品价格" width="100" align="center">
-          <template #default="{ row }">{{ row.price.toFixed(2) }}元</template>
+          <template #default="{ row }">{{ Number(row.price).toFixed(2) }}元</template>
         </el-table-column>
         <el-table-column label="秒杀价格" width="120" align="center">
           <template #default="{ row }">
@@ -59,50 +59,32 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination-bar">
-        <span>第1页 共10页 {{ seckillSkuForm.items.length }}条</span>
-        <el-pagination :total="265" layout="prev, pager, next, sizes" background />
-      </div>
     </el-card>
 
-    <!-- 添加商品弹窗 -->
     <el-dialog v-model="picker.visible" title="添加商品" width="800px" destroy-on-close>
       <div class="picker-search">
         <el-form :inline="true">
           <el-form-item label="商品">
-            <el-input v-model="picker.keyword" placeholder="请输入名称或编号" clearable style="width: 200px" />
+            <el-input v-model="picker.keyword" placeholder="请输入名称或编号" clearable style="width: 200px" @keyup.enter="loadPicker" />
           </el-form-item>
-          <el-button type="primary" @click="filterProducts">查询</el-button>
-          <el-button @click="picker.keyword = ''; filterProducts()">重置</el-button>
+          <el-button type="primary" @click="loadPicker">查询</el-button>
           <span class="picker-count">当前已选择 {{ picker.selectedIds.length }} 件商品</span>
         </el-form>
-        <el-tabs v-model="picker.tab">
-          <el-tab-pane label="全部" name="all" />
-          <el-tab-pane :label="`已选择 (${picker.selectedIds.length})`" name="selected" />
-        </el-tabs>
       </div>
       <el-table :data="pickerList" border :row-class-name="pickerRowClass" max-height="360">
         <el-table-column prop="name" label="商品名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="id" label="商品编号" width="110" />
         <el-table-column label="商品价格" width="100" align="center">
-          <template #default="{ row }">{{ row.price.toFixed(2) }}元</template>
+          <template #default="{ row }">{{ Number(row.price).toFixed(2) }}元</template>
         </el-table-column>
         <el-table-column prop="stock" label="剩余库存" width="100" align="center" />
         <el-table-column label="操作" width="100" align="center">
           <template #default="{ row }">
-            <el-button
-              v-if="!picker.selectedIds.includes(row.id)"
-              type="primary"
-              link
-              @click="selectProduct(row)"
-            >
-              选择
-            </el-button>
+            <el-button v-if="!picker.selectedIds.includes(row.id)" type="primary" link @click="selectProduct(row)">选择</el-button>
             <el-button v-else type="success" link disabled>已选择</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination class="picker-page" :total="mockStoreProducts.length" layout="prev, pager, next" small />
       <template #footer>
         <el-button @click="picker.visible = false">关闭</el-button>
         <el-button type="primary" @click="confirmPicker">添加</el-button>
@@ -115,7 +97,7 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { mockSeckillSkus, mockStoreProducts } from '@/mock/promotion'
+import { fetchProductPicker, fetchSeckillSkuList, saveSeckillSku } from '@/api/promotion'
 
 const route = useRoute()
 const router = useRouter()
@@ -126,61 +108,56 @@ const activityId = route.params.activityId
 const timeId = route.params.timeId
 const timeName = computed(() => route.query.timeName || '秒杀时段')
 
-const seckillSkuForm = reactive({
-  activityId,
-  timeId,
-  items: [],
-})
-
-const picker = reactive({
-  visible: false,
-  keyword: '',
-  tab: 'all',
-  selectedIds: [],
-})
+const seckillSkuForm = reactive({ activityId, timeId, items: [] })
+const picker = reactive({ visible: false, keyword: '', selectedIds: [] })
+const storeProducts = ref([])
 
 const pickerList = computed(() => {
-  let list = [...mockStoreProducts]
+  let list = storeProducts.value
   if (picker.keyword) {
     list = list.filter((p) => p.name.includes(picker.keyword) || p.id.includes(picker.keyword))
-  }
-  if (picker.tab === 'selected') {
-    list = list.filter((p) => picker.selectedIds.includes(p.id))
   }
   return list
 })
 
 const isLowStock = (row) => row.remainStock <= row.warningStock
-
 const pickerRowClass = ({ row }) => (picker.selectedIds.includes(row.id) ? 'row-selected' : '')
 
 const fetchSkuList = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    seckillSkuForm.items = mockSeckillSkus.map((i) => ({ ...i }))
+    seckillSkuForm.items = await fetchSeckillSkuList(activityId, timeId)
   } finally {
     loading.value = false
   }
 }
 
-const filterProducts = () => {}
+const openPicker = async () => {
+  picker.visible = true
+  picker.selectedIds = []
+  await loadPicker()
+}
+
+const loadPicker = async () => {
+  storeProducts.value = await fetchProductPicker(picker.keyword || undefined)
+}
 
 const selectProduct = (row) => {
   if (!picker.selectedIds.includes(row.id)) picker.selectedIds.push(row.id)
 }
 
 const confirmPicker = () => {
+  let added = 0
   picker.selectedIds.forEach((pid) => {
     if (seckillSkuForm.items.some((i) => i.productCode === pid)) return
-    const p = mockStoreProducts.find((x) => x.id === pid)
+    const p = storeProducts.value.find((x) => x.id === pid)
     if (!p) return
     seckillSkuForm.items.push({
-      id: `SKU${Date.now()}`,
+      id: `SKU${Date.now()}${added}`,
       name: p.name,
       productCode: p.id,
       price: p.price,
-      seckillPrice: p.price * 0.8,
+      seckillPrice: Number(p.price) * 0.8,
       seckillQty: 500,
       remainStock: 500,
       totalStock: p.stock,
@@ -188,24 +165,25 @@ const confirmPicker = () => {
       limitQty: 2,
       sort: seckillSkuForm.items.length + 1,
     })
+    added++
   })
   picker.visible = false
-  ElMessage.success(`已添加 ${picker.selectedIds.length} 件商品`)
+  ElMessage.success(`已添加 ${added} 件商品`)
   picker.selectedIds = []
 }
 
 const removeItem = (index) => seckillSkuForm.items.splice(index, 1)
 
-/**
- * POST /api/promotion/seckill/sku/save
- * 联调时后端需在分布式锁或 Redis 扣减库存层面与此处字段对齐
- */
 const submitSeckillSku = async () => {
   saving.value = true
   try {
-    // await axios.post('/api/promotion/seckill/sku/save', seckillSkuForm)
-    await new Promise((r) => setTimeout(r, 500))
+    await saveSeckillSku({
+      activityId: seckillSkuForm.activityId,
+      timeId: seckillSkuForm.timeId,
+      items: seckillSkuForm.items,
+    })
     ElMessage.success('配货保存成功')
+    fetchSkuList()
   } finally {
     saving.value = false
   }
@@ -221,9 +199,7 @@ onMounted(fetchSkuList)
 .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; margin-right: 8px; background: #409eff; border-radius: 2px; vertical-align: middle; }
 .stock-warning { color: #f56c6c; font-weight: 600; }
 .warning-tip { margin: 2px 0 0; font-size: 11px; color: #f56c6c; }
-.pagination-bar { display: flex; justify-content: space-between; margin-top: 16px; font-size: 13px; color: #606266; }
 .picker-search { margin-bottom: 12px; }
 .picker-count { margin-left: 16px; font-size: 13px; color: #606266; }
-.picker-page { margin-top: 12px; justify-content: flex-end; }
 :deep(.row-selected) { background-color: #f0f9eb !important; }
 </style>

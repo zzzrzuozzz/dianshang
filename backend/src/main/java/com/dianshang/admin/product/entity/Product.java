@@ -52,6 +52,9 @@ public class Product {
     @Column(nullable = false)
     private Integer stock = 0;
 
+    @Column(name = "frozen_stock", nullable = false)
+    private Integer frozenStock = 0;
+
     @Column(name = "month_sales", nullable = false)
     private Integer monthSales = 0;
 

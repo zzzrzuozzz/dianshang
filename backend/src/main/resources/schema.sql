@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS pms_product (
   sku VARCHAR(50),
   sort_num INT NOT NULL DEFAULT 0,
   stock INT NOT NULL DEFAULT 0,
+  frozen_stock INT NOT NULL DEFAULT 0,
   month_sales INT NOT NULL DEFAULT 0,
   total_sales INT NOT NULL DEFAULT 0,
   supplier VARCHAR(50),
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS pms_product (
 );
 
 ALTER TABLE pms_product ADD COLUMN IF NOT EXISTS delivery_regions CLOB;
+ALTER TABLE pms_product ADD COLUMN IF NOT EXISTS frozen_stock INT DEFAULT 0;
 
 ALTER TABLE pms_product ADD COLUMN IF NOT EXISTS intro CLOB;
 ALTER TABLE pms_product ADD COLUMN IF NOT EXISTS shipping_template VARCHAR(20);
@@ -159,8 +161,45 @@ CREATE TABLE IF NOT EXISTS oms_order (
   coupon_amount DECIMAL(10, 2),
   payable_subtotal DECIMAL(10, 2),
   after_sales_status VARCHAR(30) NOT NULL DEFAULT 'none',
+  product_no VARCHAR(20),
   deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
+
+ALTER TABLE oms_order ADD COLUMN IF NOT EXISTS product_no VARCHAR(20);
+
+CREATE TABLE IF NOT EXISTS wms_inventory_sku (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_no VARCHAR(20) NOT NULL,
+  sku_line_id VARCHAR(30) NOT NULL,
+  sku_name VARCHAR(100) NOT NULL,
+  sku_code VARCHAR(50),
+  actual_stock INT NOT NULL DEFAULT 0,
+  warning_stock INT NOT NULL DEFAULT 0,
+  warehouse_code VARCHAR(30) DEFAULT 'WH-001',
+  deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  UNIQUE (product_no, sku_line_id)
+);
+
+CREATE TABLE IF NOT EXISTS wms_stock_flow (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  flow_no VARCHAR(20) NOT NULL UNIQUE,
+  product_no VARCHAR(20) NOT NULL,
+  related_no VARCHAR(50),
+  order_id VARCHAR(20),
+  sku_line_id VARCHAR(30),
+  sku_name VARCHAR(100),
+  flow_type VARCHAR(30) NOT NULL,
+  before_qty INT NOT NULL,
+  change_qty INT NOT NULL,
+  after_qty INT NOT NULL,
+  operator_name VARCHAR(50),
+  remark VARCHAR(300),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_flow_product ON wms_stock_flow (product_no);
+CREATE INDEX IF NOT EXISTS idx_stock_flow_type ON wms_stock_flow (flow_type);
+CREATE INDEX IF NOT EXISTS idx_stock_flow_created ON wms_stock_flow (created_at);
 
 CREATE TABLE IF NOT EXISTS oms_after_sale (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -212,6 +251,229 @@ CREATE TABLE IF NOT EXISTS sys_region (
   parent_code VARCHAR(20) DEFAULT '0',
   level_num TINYINT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS ums_member_level (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  level_code VARCHAR(30) NOT NULL UNIQUE,
+  level_name VARCHAR(100) NOT NULL,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  growth_point INT NOT NULL DEFAULT 0,
+  free_ship_amount DECIMAL(10, 2) DEFAULT 40,
+  free_ship_times INT DEFAULT 2,
+  review_growth INT DEFAULT 5,
+  review_times INT DEFAULT 10,
+  privileges_json CLOB,
+  sort_num INT NOT NULL DEFAULT 0,
+  deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS ums_member (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_no VARCHAR(20) NOT NULL UNIQUE,
+  nickname VARCHAR(100),
+  phone VARCHAR(20) NOT NULL,
+  avatar VARCHAR(500),
+  level_code VARCHAR(30),
+  points INT NOT NULL DEFAULT 0,
+  growth_value INT NOT NULL DEFAULT 0,
+  consume_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  order_count INT NOT NULL DEFAULT 0,
+  status VARCHAR(30) NOT NULL DEFAULT 'normal',
+  remark VARCHAR(500),
+  gender VARCHAR(20),
+  city VARCHAR(100),
+  city_codes VARCHAR(200),
+  birthday VARCHAR(20),
+  register_time TIMESTAMP,
+  source VARCHAR(30),
+  permissions_json CLOB,
+  coupon_count INT NOT NULL DEFAULT 0,
+  review_count INT NOT NULL DEFAULT 0,
+  return_count INT NOT NULL DEFAULT 0,
+  login_count INT NOT NULL DEFAULT 0,
+  favorite_products INT NOT NULL DEFAULT 0,
+  favorite_topics INT NOT NULL DEFAULT 0,
+  order_friends INT NOT NULL DEFAULT 0,
+  lottery_count INT NOT NULL DEFAULT 0,
+  last_ip VARCHAR(50),
+  deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_member_phone ON ums_member (phone);
+CREATE INDEX IF NOT EXISTS idx_member_level ON ums_member (level_code);
+CREATE INDEX IF NOT EXISTS idx_member_status ON ums_member (status);
+
+CREATE TABLE IF NOT EXISTS ums_member_tag (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  tag_code VARCHAR(20) NOT NULL UNIQUE,
+  tag_name VARCHAR(100) NOT NULL,
+  rule_json CLOB,
+  member_count INT NOT NULL DEFAULT 0,
+  deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS ums_member_tag_rel (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  tag_code VARCHAR(20) NOT NULL,
+  user_no VARCHAR(20) NOT NULL,
+  UNIQUE (tag_code, user_no)
+);
+
+CREATE TABLE IF NOT EXISTS ums_member_address (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_no VARCHAR(20) NOT NULL,
+  contact_name VARCHAR(50),
+  phone VARCHAR(20),
+  region VARCHAR(200),
+  detail_address VARCHAR(300),
+  is_default BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS ums_growth_task (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  task_code VARCHAR(30) NOT NULL UNIQUE,
+  task_name VARCHAR(100) NOT NULL,
+  growth_reward INT NOT NULL DEFAULT 0,
+  points_reward INT NOT NULL DEFAULT 0,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  description VARCHAR(500),
+  sort_num INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS ums_member_ledger (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ledger_no VARCHAR(30) NOT NULL UNIQUE,
+  user_no VARCHAR(20) NOT NULL,
+  ledger_type VARCHAR(20) NOT NULL,
+  change_type VARCHAR(30) NOT NULL,
+  before_qty INT NOT NULL DEFAULT 0,
+  change_qty INT NOT NULL DEFAULT 0,
+  after_qty INT NOT NULL DEFAULT 0,
+  remark VARCHAR(500),
+  operator_name VARCHAR(50),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ledger_user ON ums_member_ledger (user_no);
+CREATE INDEX IF NOT EXISTS idx_ledger_type ON ums_member_ledger (ledger_type);
+
+CREATE TABLE IF NOT EXISTS ums_growth_config (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  config_key VARCHAR(50) NOT NULL UNIQUE,
+  config_value CLOB
+);
+
+CREATE TABLE IF NOT EXISTS pms_seckill_activity (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_code VARCHAR(20) NOT NULL UNIQUE,
+  title VARCHAR(200) NOT NULL,
+  start_time TIMESTAMP NOT NULL,
+  end_time TIMESTAMP NOT NULL,
+  online BOOLEAN NOT NULL DEFAULT TRUE,
+  warning_msg VARCHAR(500),
+  deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS pms_seckill_time_slot (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  slot_code VARCHAR(20) NOT NULL UNIQUE,
+  slot_name VARCHAR(100) NOT NULL,
+  start_time VARCHAR(12) NOT NULL,
+  end_time VARCHAR(12) NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS pms_seckill_sku (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_code VARCHAR(20) NOT NULL,
+  slot_code VARCHAR(20) NOT NULL,
+  product_no VARCHAR(20) NOT NULL,
+  product_name VARCHAR(200),
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  seckill_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  seckill_qty INT NOT NULL DEFAULT 0,
+  remain_stock INT NOT NULL DEFAULT 0,
+  warning_stock INT NOT NULL DEFAULT 0,
+  limit_qty INT NOT NULL DEFAULT 1,
+  sort_num INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_seckill_sku_act ON pms_seckill_sku (activity_code, slot_code);
+
+CREATE TABLE IF NOT EXISTS pms_group_buy_activity (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_code VARCHAR(20) NOT NULL UNIQUE,
+  title VARCHAR(200) NOT NULL,
+  start_time TIMESTAMP NOT NULL,
+  end_time TIMESTAMP NOT NULL,
+  online BOOLEAN NOT NULL DEFAULT TRUE,
+  warning_msg VARCHAR(500),
+  deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS pms_group_buy_time_slot (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  slot_code VARCHAR(20) NOT NULL,
+  activity_code VARCHAR(20) NOT NULL,
+  slot_name VARCHAR(100) NOT NULL,
+  start_time VARCHAR(12) NOT NULL,
+  end_time VARCHAR(12) NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  UNIQUE (activity_code, slot_code)
+);
+
+CREATE TABLE IF NOT EXISTS pms_group_buy_sku (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  activity_code VARCHAR(20) NOT NULL,
+  slot_code VARCHAR(20) NOT NULL,
+  product_no VARCHAR(20) NOT NULL,
+  product_name VARCHAR(200),
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  group_price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  group_size INT NOT NULL DEFAULT 2,
+  group_qty INT NOT NULL DEFAULT 0,
+  remain_stock INT NOT NULL DEFAULT 0,
+  warning_stock INT NOT NULL DEFAULT 0,
+  limit_qty INT NOT NULL DEFAULT 1,
+  sort_num INT NOT NULL DEFAULT 0,
+  attrs_json CLOB
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_sku_act ON pms_group_buy_sku (activity_code, slot_code);
+
+CREATE TABLE IF NOT EXISTS pms_coupon (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  coupon_code VARCHAR(20) NOT NULL UNIQUE,
+  coupon_name VARCHAR(200) NOT NULL,
+  coupon_type VARCHAR(30) NOT NULL,
+  scope_type VARCHAR(20) NOT NULL DEFAULT 'all',
+  scope_json CLOB,
+  threshold_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  face_value DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  issue_qty INT NOT NULL DEFAULT -1,
+  claimed_qty INT NOT NULL DEFAULT 0,
+  used_qty INT NOT NULL DEFAULT 0,
+  platform VARCHAR(30),
+  validity_days INT NOT NULL DEFAULT 15,
+  start_time TIMESTAMP,
+  end_time TIMESTAMP,
+  online BOOLEAN NOT NULL DEFAULT TRUE,
+  deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS pms_coupon_claim (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  coupon_code VARCHAR(20) NOT NULL,
+  member_phone VARCHAR(20),
+  member_no VARCHAR(20),
+  claim_method VARCHAR(30),
+  claim_time TIMESTAMP,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  use_time TIMESTAMP,
+  order_no VARCHAR(20)
+);
+
+CREATE INDEX IF NOT EXISTS idx_coupon_claim_code ON pms_coupon_claim (coupon_code);
 
 CREATE TABLE IF NOT EXISTS oms_order_address (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,

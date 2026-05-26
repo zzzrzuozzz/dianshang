@@ -12,7 +12,15 @@
             打印快递单
           </el-button>
           <el-button v-if="hasAction('export')" type="primary" size="small">导出订单</el-button>
-          <el-button v-if="hasAction('reship')" type="primary" size="small">重新发货</el-button>
+          <el-button
+            v-if="hasAction('reship')"
+            type="primary"
+            size="small"
+            :loading="reissueLoading"
+            @click="handleReissue"
+          >
+            重新发货
+          </el-button>
           <el-button v-if="hasAction('close')" type="danger" size="small">关闭订单</el-button>
         </div>
       </div>
@@ -37,7 +45,15 @@
         <div class="section-header">
           <span class="section-title">基本信息</span>
           <div>
-            <el-button v-if="orderInfo.orderStatus === 'shipped'" type="primary" size="small">重新发货</el-button>
+            <el-button
+              v-if="hasAction('reship')"
+              type="primary"
+              size="small"
+              :loading="reissueLoading"
+              @click="handleReissue"
+            >
+              重新发货
+            </el-button>
             <el-button type="primary" size="small">物流信息</el-button>
           </div>
         </div>
@@ -249,17 +265,40 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchOrderDetail } from '@/api/order'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { fetchOrderDetail, reissueOrder } from '@/api/order'
 import ExpressWaybillDialog from '@/components/express/ExpressWaybillDialog.vue'
 
 const route = useRoute()
 const loading = ref(false)
+const reissueLoading = ref(false)
 const expressDialogRef = ref(null)
 
 const openExpressPrint = () => {
   if (orderInfo.id) {
     expressDialogRef.value?.open(orderInfo.id)
   }
+}
+
+const handleReissue = () => {
+  if (!orderInfo.id) return
+  ElMessageBox.confirm(
+    `确定为订单 ${orderInfo.id} 补发商品吗？将扣减库存并生成「补发」流水，可继续打印新快递单。`,
+    '补发确认',
+    { type: 'warning' },
+  )
+    .then(async () => {
+      reissueLoading.value = true
+      try {
+        await reissueOrder(orderInfo.id)
+        ElMessage.success('补发成功，已扣减库存')
+        await getOrderDetail(orderInfo.id)
+        openExpressPrint()
+      } finally {
+        reissueLoading.value = false
+      }
+    })
+    .catch(() => {})
 }
 
 const orderInfo = reactive({

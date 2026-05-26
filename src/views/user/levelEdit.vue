@@ -1,5 +1,5 @@
 <template>
-  <div class="level-edit-page">
+  <div v-loading="loading" class="level-edit-page">
     <el-card shadow="never" class="panel-card">
       <template #header><span class="section-title">{{ isEdit ? '编辑等级' : '新增等级' }}</span></template>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
@@ -10,10 +10,7 @@
           <el-input-number v-model="form.growthPoint" :min="0" style="width: 200px" />
         </el-form-item>
         <el-form-item label="默认会员">
-          <el-checkbox-group v-model="form.isDefault">
-            <el-checkbox :value="true">是</el-checkbox>
-            <el-checkbox :value="false">否</el-checkbox>
-          </el-checkbox-group>
+          <el-switch v-model="form.isDefault" active-text="是" inactive-text="否" />
         </el-form-item>
         <el-form-item label="免运费标准">
           <span>满</span>
@@ -44,12 +41,14 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { fetchLevelDetail, saveLevel } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
+const loading = ref(false)
 const saving = ref(false)
 const formRef = ref(null)
 const isEdit = computed(() => route.params.levelId && route.params.levelId !== 'new')
@@ -66,7 +65,7 @@ const privileges = [
 const form = reactive({
   name: '',
   growthPoint: 1,
-  isDefault: [false],
+  isDefault: false,
   freeShipAmount: 40,
   freeShipTimes: 2,
   reviewGrowth: 5,
@@ -86,18 +85,50 @@ const rules = {
   growthPoint: [{ required: true, message: '请输入成长值', trigger: 'blur' }],
 }
 
+const loadLevel = async () => {
+  if (!isEdit.value) return
+  loading.value = true
+  try {
+    const data = await fetchLevelDetail(route.params.levelId)
+    Object.assign(form, {
+      name: data.name,
+      growthPoint: data.growthPoint,
+      isDefault: data.isDefault,
+      freeShipAmount: data.freeShipAmount ?? 40,
+      freeShipTimes: data.freeShipTimes ?? 2,
+      reviewGrowth: data.reviewGrowth ?? 5,
+      reviewTimes: data.reviewTimes ?? 10,
+      privileges: { ...form.privileges, ...(data.privileges || {}) },
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
 const submitLevel = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   saving.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
+    await saveLevel({
+      id: isEdit.value ? route.params.levelId : undefined,
+      name: form.name,
+      growthPoint: form.growthPoint,
+      isDefault: form.isDefault,
+      freeShipAmount: form.freeShipAmount,
+      freeShipTimes: form.freeShipTimes,
+      reviewGrowth: form.reviewGrowth,
+      reviewTimes: form.reviewTimes,
+      privileges: form.privileges,
+    })
     ElMessage.success('保存成功')
     router.push('/user/level')
   } finally {
     saving.value = false
   }
 }
+
+onMounted(loadLevel)
 </script>
 
 <style scoped>

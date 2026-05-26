@@ -182,6 +182,10 @@ public final class OrderDetailAssembler {
             actions.addAll(List.of("download", "printShip", "printExpress", "reship"));
             return actions;
         }
+        if ("completed".equals(order.getOrderStatus())) {
+            actions.addAll(List.of("download", "printShip", "printExpress", "reship"));
+            return actions;
+        }
         actions.addAll(List.of("download", "printShip", "printExpress"));
         return actions;
     }

@@ -6,6 +6,8 @@ import com.dianshang.admin.order.entity.ReturnReasonEntity;
 import com.dianshang.admin.order.repository.AfterSaleRepository;
 import com.dianshang.admin.order.repository.OrderRepository;
 import com.dianshang.admin.order.repository.ReturnReasonRepository;
+import com.dianshang.admin.product.entity.Product;
+import com.dianshang.admin.product.repository.ProductRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -22,13 +24,16 @@ public class OrderDataInitializer implements CommandLineRunner {
     private final OrderRepository orderRepository;
     private final AfterSaleRepository afterSaleRepository;
     private final ReturnReasonRepository returnReasonRepository;
+    private final ProductRepository productRepository;
 
     public OrderDataInitializer(OrderRepository orderRepository,
                                 AfterSaleRepository afterSaleRepository,
-                                ReturnReasonRepository returnReasonRepository) {
+                                ReturnReasonRepository returnReasonRepository,
+                                ProductRepository productRepository) {
         this.orderRepository = orderRepository;
         this.afterSaleRepository = afterSaleRepository;
         this.returnReasonRepository = returnReasonRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
@@ -119,7 +124,15 @@ public class OrderDataInitializer implements CommandLineRunner {
         o.setCouponAmount(new BigDecimal(discount).abs());
         o.setPayableSubtotal(actualAmount.add(new BigDecimal(freight)));
         o.setAfterSalesStatus("none");
+        o.setProductNo(resolveProductNo(productName));
         orderRepository.save(o);
+    }
+
+    private String resolveProductNo(String productName) {
+        return productRepository.findAll((root, q, cb) -> cb.and(
+                cb.isFalse(root.get("deleted")),
+                cb.equal(root.get("title"), productName)
+        )).stream().findFirst().map(Product::getProductNo).orElse(null);
     }
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-M-d HH:mm");

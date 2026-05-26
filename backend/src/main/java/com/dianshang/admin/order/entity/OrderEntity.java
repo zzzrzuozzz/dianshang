@@ -149,6 +149,9 @@ public class OrderEntity {
     @Column(name = "after_sales_status", nullable = false, length = 30)
     private String afterSalesStatus = "none";
 
+    @Column(name = "product_no", length = 20)
+    private String productNo;
+
     @Column(nullable = false)
     private Boolean deleted = false;
 }

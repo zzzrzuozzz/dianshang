@@ -46,32 +46,36 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockLevelList } from '@/mock/user'
+import { deleteLevel, fetchLevelList } from '@/api/user'
 
 const router = useRouter()
 const loading = ref(false)
 const tableData = ref([])
 const searchForm = reactive({ name: '' })
 
-const fetchLevelList = async () => {
+const fetchLevelListData = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    tableData.value = [...mockLevelList]
+    tableData.value = await fetchLevelList({ name: searchForm.name || undefined })
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => { fetchLevelList(); ElMessage.success('查询成功') }
-const handleReset = () => { searchForm.name = ''; fetchLevelList() }
+const handleSearch = () => { fetchLevelListData(); ElMessage.success('查询成功') }
+const handleReset = () => { searchForm.name = ''; fetchLevelListData() }
 const goEdit = (row) => router.push(`/user/level/edit/${row.id}`)
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除等级「${row.name}」吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功')).catch(() => {})
+    .then(async () => {
+      await deleteLevel(row.id)
+      ElMessage.success('删除成功')
+      fetchLevelListData()
+    })
+    .catch(() => {})
 }
 
-onMounted(fetchLevelList)
+onMounted(fetchLevelListData)
 </script>
 
 <style scoped>

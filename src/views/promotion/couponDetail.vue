@@ -4,8 +4,8 @@
       <div class="action-bar">
         <span class="action-label">操作</span>
         <div>
-          <el-button type="primary" size="small">编辑优惠券</el-button>
-          <el-button type="danger" size="small">下架</el-button>
+          <el-button type="primary" size="small" @click="router.push('/promotion/coupon')">返回列表</el-button>
+          <el-button type="danger" size="small" @click="toggleOnline">{{ couponInfo.online ? '下架' : '上线' }}</el-button>
         </div>
       </div>
     </el-card>
@@ -35,15 +35,8 @@
         <div class="history-header">
           <span class="section-title">领取明细</span>
           <el-form :inline="true" :model="historySearch" size="small">
-            <el-form-item>
-              <el-input v-model="historySearch.couponId" placeholder="优惠券编号" clearable style="width: 120px" />
-            </el-form-item>
-            <el-form-item>
-              <el-input v-model="historySearch.member" placeholder="会员名称/手机号" clearable style="width: 140px" />
-            </el-form-item>
-            <el-form-item>
-              <el-input v-model="historySearch.orderId" placeholder="订单编号" clearable style="width: 120px" />
-            </el-form-item>
+            <el-form-item><el-input v-model="historySearch.member" placeholder="会员名称/手机号" clearable style="width: 140px" /></el-form-item>
+            <el-form-item><el-input v-model="historySearch.orderId" placeholder="订单编号" clearable style="width: 120px" /></el-form-item>
             <el-button type="primary" @click="fetchCouponHistory">查询</el-button>
             <el-button @click="resetHistorySearch">重置</el-button>
           </el-form>
@@ -77,10 +70,6 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination-bar">
-        <span>第1页 共10页 265条</span>
-        <el-pagination :total="265" layout="prev, pager, next, sizes" background />
-      </div>
     </el-card>
   </div>
 </template>
@@ -89,44 +78,78 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { mockCouponDetail, mockCouponHistory } from '@/mock/promotion'
+import { fetchCouponDetail, fetchCouponHistory as getCouponHistoryApi, toggleCouponOnline } from '@/api/promotion'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const historyTab = ref('all')
 const historyData = ref([])
+const couponCode = route.params.id
 
-const couponInfo = reactive({ ...mockCouponDetail })
-const historySearch = reactive({ couponId: '', member: '', orderId: '' })
+const couponInfo = reactive({
+  name: '',
+  type: '',
+  products: '',
+  threshold: '',
+  faceValue: 0,
+  status: '',
+  timeRange: '',
+  validity: '',
+  totalIssue: 0,
+  remain: 0,
+  claimed: 0,
+  used: 0,
+  pending: 0,
+  expired: 0,
+  online: true,
+})
+
+const historySearch = reactive({ member: '', orderId: '' })
 
 const statusLabel = (s) => ({ pending: '待使用', used: '已使用', expired: '已过期' }[s] || s)
 const statusClass = (s) => (s === 'expired' ? 'text-muted' : s === 'used' ? 'text-success' : '')
 
-/**
- * GET /api/promotion/coupon/history/{id}
- */
+const loadDetail = async () => {
+  loading.value = true
+  try {
+    const d = await fetchCouponDetail(couponCode)
+    Object.assign(couponInfo, d)
+  } finally {
+    loading.value = false
+  }
+}
+
 const fetchCouponHistory = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    let list = [...mockCouponHistory]
-    if (historyTab.value !== 'all') list = list.filter((i) => i.status === historyTab.value)
-    historyData.value = list
+    historyData.value = await getCouponHistoryApi(couponCode, {
+      tab: historyTab.value,
+      member: historySearch.member || undefined,
+      orderId: historySearch.orderId || undefined,
+    })
   } finally {
     loading.value = false
   }
 }
 
 const resetHistorySearch = () => {
-  Object.assign(historySearch, { couponId: '', member: '', orderId: '' })
+  historySearch.member = ''
+  historySearch.orderId = ''
   fetchCouponHistory()
+}
+
+const toggleOnline = async () => {
+  await toggleCouponOnline(couponCode, !couponInfo.online)
+  couponInfo.online = !couponInfo.online
+  ElMessage.success(couponInfo.online ? '已上线' : '已下架')
+  loadDetail()
 }
 
 const viewOrder = (row) => router.push(`/order/detail/${row.orderId}`)
 
 onMounted(() => {
-  Object.assign(couponInfo, mockCouponDetail)
+  loadDetail()
   fetchCouponHistory()
 })
 </script>
@@ -140,5 +163,4 @@ onMounted(() => {
 .history-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
 .text-success { color: #67c23a; }
 .text-muted { color: #909399; }
-.pagination-bar { display: flex; justify-content: space-between; margin-top: 16px; font-size: 13px; color: #606266; }
 </style>

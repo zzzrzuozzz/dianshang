@@ -8,7 +8,10 @@
     </el-card>
 
     <el-card shadow="never" class="panel-card">
-      <el-table :data="tableData" border stripe>
+      <el-empty v-if="!loading && tableData.length === 0" description="暂无秒杀时段，请先配置">
+        <el-button type="primary" @click="router.push('/promotion/seckill/time')">去添加时间段</el-button>
+      </el-empty>
+      <el-table v-else :data="tableData" border stripe>
         <el-table-column prop="id" label="编号" width="100" align="center" />
         <el-table-column prop="name" label="秒杀时段名称" min-width="140" />
         <el-table-column prop="start" label="每日开始时间" width="130" align="center" />
@@ -26,7 +29,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { mockTimeSlots } from '@/mock/promotion'
+import { fetchSeckillActivitySlots } from '@/api/promotion'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,8 +40,7 @@ const activityId = route.params.activityId
 const fetchSlots = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 300))
-    tableData.value = [...mockTimeSlots]
+    tableData.value = await fetchSeckillActivitySlots(activityId)
   } finally {
     loading.value = false
   }

@@ -1,6 +1,5 @@
 <template>
   <div v-loading="loading" class="inventory-page">
-    <!-- 搜索栏 -->
     <el-card shadow="never" class="panel-card">
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="商品">
@@ -50,19 +49,15 @@
       </el-form>
     </el-card>
 
-    <!-- Tabs + 操作按钮 -->
     <el-card shadow="never" class="panel-card">
       <div class="toolbar">
-        <el-tabs v-model="activeTab" @tab-change="fetchInventoryList">
-          <el-tab-pane label="全部库存" name="all">
-            <template #label>全部库存({{ tabCounts.all }})</template>
-          </el-tab-pane>
-          <el-tab-pane label="预警商品" name="warning">
-            <template #label>预警商品({{ tabCounts.warning }})</template>
-          </el-tab-pane>
-          <el-tab-pane label="已售罄商品" name="out">
-            <template #label>已售罄商品({{ tabCounts.out }})</template>
-          </el-tab-pane>
+        <el-tabs v-model="activeTab" @tab-change="onTabChange">
+          <el-tab-pane
+            v-for="tab in statusTabs"
+            :key="tab.key"
+            :name="tab.key"
+            :label="`${tab.label}(${tab.count})`"
+          />
         </el-tabs>
         <div class="toolbar-actions">
           <el-button type="primary" @click="handleBatchAdjust">批量调整库存</el-button>
@@ -71,7 +66,6 @@
       </div>
     </el-card>
 
-    <!-- 数据表格 -->
     <el-card shadow="never" class="panel-card table-card">
       <el-table
         :data="tableData"
@@ -133,11 +127,12 @@
           :total="pagination.total"
           layout="prev, pager, next, sizes"
           background
+          @current-change="fetchInventoryList"
+          @size-change="onPageSizeChange"
         />
       </div>
     </el-card>
 
-    <!-- 调整库存弹窗 -->
     <el-dialog
       v-model="stockDialog.visible"
       title="编辑库存"
@@ -156,7 +151,7 @@
 
       <el-table :data="stockDialog.skus" border class="sku-table">
         <el-table-column prop="skuName" label="规格名称" min-width="120" />
-        <el-table-column prop="skuId" label="规格编号" width="100" />
+        <el-table-column prop="skuId" label="规格编号" width="120" />
         <el-table-column prop="skuCode" label="货号" width="110" />
         <el-table-column label="仓库库存" width="140" align="center">
           <template #default="{ row }">
@@ -185,20 +180,21 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import {
-  categoryCascaderOptions,
-  supplierOptions,
-  mockInventoryList,
-  inventoryTabCounts,
-} from '@/mock/inventory'
+import { fetchCategoryTree } from '@/api/product'
+import { fetchInventoryList as loadInventoryList, updateInventory } from '@/api/inventory'
+import { supplierOptions } from '@/mock/inventory'
 
 const router = useRouter()
 const loading = ref(false)
 const activeTab = ref('all')
 const tableData = ref([])
 const selectedRows = ref([])
-
-const tabCounts = { ...inventoryTabCounts }
+const categoryCascaderOptions = ref([])
+const statusTabs = ref([
+  { key: 'all', label: '全部库存', count: 0 },
+  { key: 'warning', label: '预警商品', count: 0 },
+  { key: 'out', label: '已售罄商品', count: 0 },
+])
 
 const searchForm = reactive({
   keyword: '',
@@ -210,8 +206,8 @@ const searchForm = reactive({
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 265,
-  totalPages: 10,
+  total: 0,
+  totalPages: 1,
 })
 
 const stockDialog = reactive({
@@ -221,39 +217,57 @@ const stockDialog = reactive({
   skus: [],
 })
 
+const mapCategoryTree = (nodes) =>
+  (nodes || []).map((n) => ({
+    value: n.id,
+    label: n.label,
+    children: n.children?.length ? mapCategoryTree(n.children) : undefined,
+  }))
+
+const buildQuery = () => ({
+  keyword: searchForm.keyword || undefined,
+  category: searchForm.category?.length
+    ? String(searchForm.category[searchForm.category.length - 1])
+    : undefined,
+  supplier: searchForm.supplier || undefined,
+  stockStatus: searchForm.stockStatus || undefined,
+  tab: activeTab.value,
+  page: pagination.page,
+  pageSize: pagination.pageSize,
+})
+
 const isLowStock = (row) => row.actualStock > 0 && row.actualStock <= row.warningStock
 
 const rowClassName = ({ row }) => (isLowStock(row) ? 'row-warning' : '')
 
-/**
- * 获取库存列表
- * 此处后续使用 axios 请求 Spring Boot 后端的 /api/inventory/list 接口
- */
 const fetchInventoryList = async () => {
   loading.value = true
   try {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    let list = [...mockInventoryList]
-    if (activeTab.value === 'warning') {
-      list = list.filter((item) => item.status === 'warning')
-    } else if (activeTab.value === 'out') {
-      list = list.filter((item) => item.status === 'out')
+    const data = await loadInventoryList(buildQuery())
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
+    if (data.tabs?.length) {
+      statusTabs.value = data.tabs
     }
-    if (searchForm.stockStatus) {
-      list = list.filter((item) => item.status === searchForm.stockStatus)
-    }
-    tableData.value = list
-    pagination.total = activeTab.value === 'all' ? 265 : list.length
-    pagination.totalPages = Math.ceil(pagination.total / pagination.pageSize)
   } finally {
     loading.value = false
   }
 }
 
+const onTabChange = () => {
+  pagination.page = 1
+  fetchInventoryList()
+}
+
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchInventoryList()
+}
+
 const handleSearch = () => {
   pagination.page = 1
   fetchInventoryList()
-  ElMessage.success('查询成功')
 }
 
 const handleReset = () => {
@@ -264,6 +278,7 @@ const handleReset = () => {
     stockStatus: '',
   })
   activeTab.value = 'all'
+  pagination.page = 1
   fetchInventoryList()
 }
 
@@ -272,7 +287,11 @@ const handleBatchAdjust = () => {
     ElMessage.warning('请先选择要调整的商品')
     return
   }
-  ElMessage.info(`已选择 ${selectedRows.value.length} 个商品，批量调整功能开发中`)
+  if (selectedRows.value.length === 1) {
+    openStockDialog(selectedRows.value[0])
+    return
+  }
+  ElMessage.info(`已选择 ${selectedRows.value.length} 个商品，请逐个调整库存`)
 }
 
 const openStockDialog = (row) => {
@@ -286,30 +305,14 @@ const resetStockDialog = () => {
   stockDialog.skus = []
 }
 
-/**
- * 提交库存调整
- * POST /api/inventory/update
- */
 const handleUpdateStock = async () => {
+  if (!stockDialog.row) return
   stockDialog.saving = true
   try {
-    // const { data } = await axios.post('/api/inventory/update', {
-    //   goodsId: stockDialog.row.goodsId,
-    //   skus: stockDialog.skus,
-    // })
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    const mainSku = stockDialog.skus[0]
-    if (stockDialog.row && mainSku) {
-      stockDialog.row.actualStock = mainSku.actualStock
-      stockDialog.row.warningStock = mainSku.warningStock
-      stockDialog.row.availableStock = mainSku.actualStock - stockDialog.row.frozenStock
-      stockDialog.row.status =
-        mainSku.actualStock === 0
-          ? 'out'
-          : mainSku.actualStock <= mainSku.warningStock
-            ? 'warning'
-            : 'sufficient'
-    }
+    await updateInventory({
+      goodsId: stockDialog.row.goodsId,
+      skus: stockDialog.skus,
+    })
     ElMessage.success('库存更新成功')
     stockDialog.visible = false
     fetchInventoryList()
@@ -322,7 +325,15 @@ const goFlow = (row) => {
   router.push({ path: '/inventory/flow', query: { goodsId: row.goodsId } })
 }
 
-onMounted(fetchInventoryList)
+onMounted(async () => {
+  try {
+    const tree = await fetchCategoryTree()
+    categoryCascaderOptions.value = mapCategoryTree(tree)
+  } catch {
+    categoryCascaderOptions.value = []
+  }
+  fetchInventoryList()
+})
 </script>
 
 <style scoped>

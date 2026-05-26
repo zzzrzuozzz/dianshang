@@ -70,6 +70,13 @@ public class OrderController {
         return ApiResponse.ok(null);
     }
 
+    @PostMapping("/{orderNo}/reissue")
+    public ApiResponse<Void> reissue(@PathVariable String orderNo,
+                                     @RequestBody(required = false) ShipRequest request) {
+        orderService.reissue(orderNo, request);
+        return ApiResponse.ok(null);
+    }
+
     @PostMapping("/{orderNo}/confirm")
     public ApiResponse<Void> confirm(@PathVariable String orderNo) {
         orderService.confirm(orderNo);

@@ -103,15 +103,16 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AreaCascader from '@/components/AreaCascader/index.vue'
-import { memberLevelOptions } from '@/mock/user'
+import { fetchLevelOptions, fetchTagDetail, saveTag } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
+const memberLevelOptions = ref([])
 const saving = ref(false)
 const formRef = ref(null)
 
@@ -140,19 +141,52 @@ const rules = { name: [{ required: true, message: '请输入标签名称', trigg
 /**
  * POST /api/user/tag/save
  */
+const loadTag = async () => {
+  if (!isEdit.value) return
+  loading.value = true
+  try {
+    const data = await fetchTagDetail(route.params.tagId)
+    Object.assign(form, {
+      name: data.name,
+      gender: data.gender || ['all'],
+      memberLevels: data.memberLevels || ['all'],
+      cityMode: data.cityMode || 'all',
+      regionCodes: data.regionCodes || [],
+      registerEnabled: data.registerEnabled || false,
+      registerType: data.registerType || 'unlimited',
+      registerRange: data.registerRange || [],
+      registerDays: data.registerDays ?? 30,
+      orderCountEnabled: data.orderCountEnabled || false,
+      orderCountType: data.orderCountType || 'cumulative',
+      orderCount: data.orderCount ?? 10,
+      amountEnabled: data.amountEnabled || false,
+      amountType: data.amountType || 'cumulative',
+      amount: data.amount ?? 2000,
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
 const saveTagRule = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   saving.value = true
   try {
-    // await axios.post('/api/user/tag/save', form)
-    await new Promise((r) => setTimeout(r, 400))
+    const payload = { ...form }
+    if (isEdit.value) payload.id = route.params.tagId
+    await saveTag(payload)
     ElMessage.success('保存成功')
     router.push('/user/tag')
   } finally {
     saving.value = false
   }
 }
+
+onMounted(async () => {
+  memberLevelOptions.value = await fetchLevelOptions()
+  await loadTag()
+})
 </script>
 
 <style scoped>

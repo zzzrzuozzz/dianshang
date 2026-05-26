@@ -11,7 +11,7 @@
         <el-table-column prop="account" label="用户账号" width="120" />
         <el-table-column prop="level" label="用户等级" width="100" align="center" />
         <el-table-column label="消费金额" width="100" align="center">
-          <template #default="{ row }">{{ row.consumeAmount.toFixed(2) }}</template>
+          <template #default="{ row }">{{ Number(row.consumeAmount).toFixed(2) }}</template>
         </el-table-column>
         <el-table-column prop="orderCount" label="订单数量" width="90" align="center" />
         <el-table-column prop="points" label="可用积分" width="90" align="center" />
@@ -31,31 +31,45 @@
       </el-table>
       <div class="pagination-bar">
         <span>第{{ pagination.page }}页 共{{ pagination.totalPages }}页 {{ pagination.total }}条</span>
-        <el-pagination v-model:current-page="pagination.page" :total="pagination.total" layout="prev, pager, next, sizes" background />
+        <el-pagination
+          v-model:current-page="pagination.page"
+          :total="pagination.total"
+          layout="prev, pager, next, sizes"
+          background
+          @current-change="fetchTagUsers"
+        />
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockUserList } from '@/mock/user'
+import { fetchTagUsers as getTagUsersApi, removeTagUser } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const tableData = ref([])
-const pagination = { page: 1, total: 265, totalPages: 10 }
+const pagination = reactive({ page: 1, pageSize: 10, total: 0, totalPages: 0 })
 
 const tagName = computed(() => route.query.tagName || '标签')
+const tagId = computed(() => String(route.query.tagId || ''))
 
 const fetchTagUsers = async () => {
+  if (!tagId.value) return
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    tableData.value = [...mockUserList]
+    const data = await getTagUsersApi({
+      tagId: tagId.value,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
   } finally {
     loading.value = false
   }
@@ -64,7 +78,11 @@ const fetchTagUsers = async () => {
 const goDetail = (row) => router.push(`/user/detail/${row.id}`)
 const removeFromTag = (row) => {
   ElMessageBox.confirm(`确定将 ${row.nickname} 移出当前标签吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('已移出标签'))
+    .then(async () => {
+      await removeTagUser(tagId.value, row.id)
+      ElMessage.success('已移出标签')
+      fetchTagUsers()
+    })
     .catch(() => {})
 }
 

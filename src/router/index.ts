@@ -213,6 +213,24 @@ const router = createRouter({
           meta: { title: '营销管理', subTitle: '团购活动' },
         },
         {
+          path: 'promotion/group-buy/:activityId/time',
+          name: 'GroupBuyTime',
+          component: () => import('@/views/promotion/groupBuyTime.vue'),
+          meta: { title: '营销管理', subTitle: '时间段设置' },
+        },
+        {
+          path: 'promotion/group-buy/:activityId/products',
+          name: 'GroupBuyProduct',
+          component: () => import('@/views/promotion/groupBuyProduct.vue'),
+          meta: { title: '营销管理', subTitle: '设置商品' },
+        },
+        {
+          path: 'promotion/group-buy/:activityId/sku/:timeId',
+          name: 'GroupBuySku',
+          component: () => import('@/views/promotion/groupBuySku.vue'),
+          meta: { title: '营销管理', subTitle: '商品列表' },
+        },
+        {
           path: 'promotion/coupon',
           name: 'Coupon',
           component: () => import('@/views/promotion/coupon.vue'),

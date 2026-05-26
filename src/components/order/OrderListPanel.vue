@@ -180,6 +180,15 @@
                 退款
               </el-button>
               <el-button
+                v-if="row.orderStatus === 'shipped' || row.orderStatus === 'completed'"
+                type="warning"
+                size="small"
+                plain
+                @click="handleReissue(row)"
+              >
+                补发
+              </el-button>
+              <el-button
                 v-if="row.orderStatus === 'pending_ship' || row.orderStatus === 'shipped'"
                 type="primary"
                 size="small"
@@ -229,6 +238,7 @@ import {
   confirmOrder,
   fetchOrderList as loadOrderList,
   refundOrder,
+  reissueOrder,
   shipOrder,
 } from '@/api/order'
 
@@ -350,6 +360,19 @@ const openExpressPrint = (row) => {
     return
   }
   expressDialogRef.value?.open(target.id)
+}
+
+const handleReissue = (row) => {
+  ElMessageBox.confirm(`确定对订单 ${row.id} 补发吗？将扣减库存并记录补发流水。`, '补发确认', {
+    type: 'warning',
+  })
+    .then(async () => {
+      await reissueOrder(row.id)
+      ElMessage.success('补发成功')
+      fetchOrderList()
+      openExpressPrint(row)
+    })
+    .catch(() => {})
 }
 
 const handleShip = (row) => {

@@ -25,7 +25,7 @@
 
     <el-card shadow="never" class="panel-card">
       <div class="toolbar">
-        <el-tabs v-model="activeTab" @tab-change="fetchSeckillList">
+        <el-tabs v-model="activeTab" @tab-change="onTabChange">
           <el-tab-pane label="全部" name="all" />
           <el-tab-pane label="待开始" name="pending" />
           <el-tab-pane label="进行中" name="active" />
@@ -59,14 +59,7 @@
         </el-table-column>
         <el-table-column label="上线/下架" width="100" align="center">
           <template #default="{ row }">
-            <el-button
-              v-if="row.online"
-              type="danger"
-              link
-              @click="toggleOnline(row, false)"
-            >
-              下架
-            </el-button>
+            <el-button v-if="row.online" type="danger" link @click="toggleOnline(row, false)">下架</el-button>
             <el-button v-else type="success" link @click="toggleOnline(row, true)">上线</el-button>
           </template>
         </el-table-column>
@@ -80,7 +73,13 @@
       </el-table>
       <div class="pagination-bar">
         <span>第{{ pagination.page }}页 共{{ pagination.totalPages }}页 {{ pagination.total }}条</span>
-        <el-pagination v-model:current-page="pagination.page" :total="pagination.total" layout="prev, pager, next, sizes" background />
+        <el-pagination
+          v-model:current-page="pagination.page"
+          :total="pagination.total"
+          layout="prev, pager, next, sizes"
+          background
+          @current-change="fetchSeckillList"
+        />
       </div>
     </el-card>
 
@@ -111,7 +110,14 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockSeckillList, seckillStatusMap } from '@/mock/promotion'
+import {
+  deleteSeckill,
+  fetchSeckillList as getSeckillListApi,
+  saveSeckill,
+  seckillStatusMap,
+  toggleSeckillOnline,
+} from '@/api/promotion'
+import { toPickerDatetime } from '@/utils/promoDatetime'
 
 const router = useRouter()
 const loading = ref(false)
@@ -120,7 +126,7 @@ const tableData = ref([])
 const formRef = ref(null)
 
 const searchForm = reactive({ keyword: '', dateRange: [] })
-const pagination = reactive({ page: 1, total: 265, totalPages: 10 })
+const pagination = reactive({ page: 1, total: 0, totalPages: 0 })
 
 const dialog = reactive({
   visible: false,
@@ -141,28 +147,54 @@ const statusClass = (status) => {
   return ''
 }
 
-/**
- * GET /api/promotion/seckill/list
- */
 const fetchSeckillList = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    let list = [...mockSeckillList]
-    if (activeTab.value !== 'all') list = list.filter((i) => i.status === activeTab.value)
-    tableData.value = list
+    const [startDate, endDate] = searchForm.dateRange || []
+    const data = await getSeckillListApi({
+      keyword: searchForm.keyword || undefined,
+      tab: activeTab.value,
+      startDate,
+      endDate,
+      page: pagination.page,
+      pageSize: 10,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => { fetchSeckillList(); ElMessage.success('查询成功') }
-const handleReset = () => { searchForm.keyword = ''; searchForm.dateRange = []; fetchSeckillList() }
+const onTabChange = () => {
+  pagination.page = 1
+  fetchSeckillList()
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  fetchSeckillList()
+  ElMessage.success('查询成功')
+}
+
+const handleReset = () => {
+  searchForm.keyword = ''
+  searchForm.dateRange = []
+  pagination.page = 1
+  fetchSeckillList()
+}
 
 const openDialog = (row) => {
   dialog.isEdit = !!row
   if (row) {
-    Object.assign(dialog.form, { id: row.id, title: row.title, startTime: row.startTime, endTime: row.endTime, online: row.online })
+    Object.assign(dialog.form, {
+      id: row.id,
+      title: row.title,
+      startTime: toPickerDatetime(row.startTime),
+      endTime: toPickerDatetime(row.endTime),
+      online: row.online,
+    })
   } else {
     Object.assign(dialog.form, { id: '', title: '', startTime: '', endTime: '', online: true })
   }
@@ -174,25 +206,35 @@ const saveActivity = async () => {
   if (!valid) return
   dialog.saving = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    ElMessage.success('保存成功')
+    const wasNew = !dialog.isEdit
+    const code = await saveSeckill({ ...dialog.form })
+    ElMessage.success(wasNew ? `活动已创建，编号 ${code}` : '保存成功')
     dialog.visible = false
-    fetchSeckillList()
+    await fetchSeckillList()
+    if (wasNew && code) {
+      router.push(`/promotion/seckill/${code}/products`)
+    }
   } finally {
     dialog.saving = false
   }
 }
 
-const toggleOnline = (row, online) => {
+const toggleOnline = async (row, online) => {
+  await toggleSeckillOnline(row.id, online)
   row.online = online
   ElMessage.success(online ? '已上线' : '已下架')
+  fetchSeckillList()
 }
 
 const goProducts = (row) => router.push(`/promotion/seckill/${row.id}/products`)
 
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除活动「${row.title}」吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteSeckill(row.id)
+      ElMessage.success('删除成功')
+      fetchSeckillList()
+    })
     .catch(() => {})
 }
 

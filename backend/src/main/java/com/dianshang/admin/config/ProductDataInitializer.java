@@ -134,6 +134,8 @@ public class ProductDataInitializer implements CommandLineRunner {
         p.setSku(sku);
         p.setSortNum(sort);
         p.setStock(stock);
+        p.setStockWarning(Math.max(50, stock / 10));
+        p.setFrozenStock(stock > 500 ? 12 : 0);
         p.setMonthSales(monthSales);
         p.setTotalSales(totalSales);
         p.setSupplier(supplier);

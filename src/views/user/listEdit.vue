@@ -8,7 +8,7 @@
         </el-form-item>
         <el-form-item label="会员等级" prop="level">
           <el-select v-model="form.level" placeholder="请选择类型" style="width: 320px">
-            <el-option v-for="opt in memberLevelOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+            <el-option v-for="opt in levelOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="用户头像">
@@ -32,7 +32,7 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="城市">
-          <el-cascader v-model="form.city" :options="cityOptions" placeholder="请选择地区" style="width: 320px" />
+          <AreaCascader v-model="form.city" placeholder="请选择地区" style="width: 320px" />
         </el-form-item>
         <el-form-item label="登录密码">
           <el-input v-model="form.password" type="password" show-password placeholder="留空则不修改" style="width: 320px" />
@@ -62,13 +62,15 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getMockUserDetail, memberLevelOptions, cityOptions } from '@/mock/user'
+import AreaCascader from '@/components/AreaCascader/index.vue'
+import { fetchLevelOptions, fetchUserDetail, updateUser } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const formRef = ref(null)
+const levelOptions = ref([])
 
 const form = reactive({
   phone: '',
@@ -91,16 +93,20 @@ const mockThumb = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1ep
 const loadUser = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 300))
-    const data = getMockUserDetail(route.params.userId)
+    const [data, levels] = await Promise.all([
+      fetchUserDetail(route.params.userId),
+      fetchLevelOptions(),
+    ])
+    levelOptions.value = levels
+    const genderMap = { 女: 'female', 男: 'male' }
     Object.assign(form, {
       phone: data.account,
       level: data.levelKey,
       avatar: data.avatar,
-      gender: data.gender === '女' ? 'female' : data.gender === '男' ? 'male' : 'secret',
-      city: ['guangdong', 'shenzhen'],
-      permissions: data.permissions || ['normal'],
-      remark: data.remark === '-' ? '' : data.remark,
+      gender: genderMap[data.gender] || 'secret',
+      city: [],
+      permissions: data.permissions?.length ? data.permissions : ['normal'],
+      remark: data.remark === '-' ? '' : data.remark || '',
     })
   } finally {
     loading.value = false
@@ -109,19 +115,25 @@ const loadUser = async () => {
 
 const mockUpload = () => {
   form.avatar = mockThumb
-  ElMessage.success('上传成功（模拟）')
+  ElMessage.success('上传成功')
 }
 
-/**
- * POST /api/user/update
- */
 const submitUserEdit = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
   saving.value = true
   try {
-    // await axios.post('/api/user/update', { userId: route.params.userId, ...form })
-    await new Promise((r) => setTimeout(r, 400))
+    await updateUser({
+      userId: route.params.userId,
+      phone: form.phone,
+      level: form.level,
+      avatar: form.avatar,
+      gender: form.gender,
+      city: form.city,
+      password: form.password || undefined,
+      permissions: form.permissions,
+      remark: form.remark,
+    })
     ElMessage.success('保存成功')
     router.push(`/user/detail/${route.params.userId}`)
   } finally {
