@@ -459,6 +459,7 @@ public class PromotionService {
                     vo.setName(p.getTitle());
                     vo.setPrice(p.getDiscountPrice());
                     vo.setStock(p.getStock());
+                    vo.setThumb(p.getThumb());
                     return vo;
                 })
                 .toList();

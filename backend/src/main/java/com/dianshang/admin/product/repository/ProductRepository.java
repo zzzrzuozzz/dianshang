@@ -10,7 +10,11 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Optional<Product> findByProductNoAndDeletedFalse(String productNo);
 
+    Optional<Product> findByProductNoAndDeletedTrue(String productNo);
+
     long countByDeletedFalse();
+
+    long countByDeletedTrue();
 
     long countByDeletedFalseAndStatus(String status);
 

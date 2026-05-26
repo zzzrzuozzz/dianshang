@@ -2,7 +2,7 @@
   <div class="push-edit-page">
     <el-card shadow="never" class="panel-card">
       <template #header>
-        <span class="section-title">新增推送</span>
+        <span class="section-title">{{ isEdit ? '编辑推送' : '新增推送' }}</span>
       </template>
       <SmsPushForm />
     </el-card>
@@ -10,7 +10,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import SmsPushForm from '@/components/ops/SmsPushForm.vue'
+
+const route = useRoute()
+const isEdit = computed(() => Boolean(route.params.id))
 </script>
 
 <style scoped>

@@ -255,6 +255,12 @@ const router = createRouter({
           meta: { title: '运营管理', subTitle: '新增推送', mode: 'system' },
         },
         {
+          path: 'ops/system-message/edit/:id',
+          name: 'OpsSystemMessageEdit',
+          component: () => import('@/views/ops/messagePushEdit.vue'),
+          meta: { title: '运营管理', subTitle: '编辑推送', mode: 'system' },
+        },
+        {
           path: 'ops/sms',
           name: 'OpsSms',
           component: () => import('@/views/ops/sms.vue'),
@@ -267,6 +273,12 @@ const router = createRouter({
           meta: { title: '运营管理', subTitle: '新增推送' },
         },
         {
+          path: 'ops/sms/edit/:id',
+          name: 'OpsSmsEdit',
+          component: () => import('@/views/ops/smsPushEdit.vue'),
+          meta: { title: '运营管理', subTitle: '编辑推送' },
+        },
+        {
           path: 'ops/station-message',
           name: 'OpsStationMessage',
           component: () => import('@/views/ops/stationMessage.vue'),
@@ -277,6 +289,12 @@ const router = createRouter({
           name: 'OpsStationMessageAdd',
           component: () => import('@/views/ops/messagePushEdit.vue'),
           meta: { title: '运营管理', subTitle: '新增推送', mode: 'station' },
+        },
+        {
+          path: 'ops/station-message/edit/:id',
+          name: 'OpsStationMessageEdit',
+          component: () => import('@/views/ops/messagePushEdit.vue'),
+          meta: { title: '运营管理', subTitle: '编辑推送', mode: 'station' },
         },
         {
           path: 'ops/advertisement',

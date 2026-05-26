@@ -66,4 +66,20 @@ public final class ProductSpecifications {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
+    public static Specification<Product> forRecycle(String keyword) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isTrue(root.get("deleted")));
+            if (StringUtils.hasText(keyword)) {
+                String like = "%" + keyword.trim() + "%";
+                predicates.add(cb.or(
+                        cb.like(root.get("title"), like),
+                        cb.like(root.get("productNo"), like),
+                        cb.like(root.get("sku"), like)
+                ));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 }

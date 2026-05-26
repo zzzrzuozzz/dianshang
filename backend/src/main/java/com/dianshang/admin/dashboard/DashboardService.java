@@ -111,8 +111,8 @@ public class DashboardService {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd");
         DashboardOverviewVO.ChartVO chart = new DashboardOverviewVO.ChartVO();
         chart.setDates(metrics.stream().map(m -> m.getStatDate().format(fmt)).toList());
-        chart.setSales(metrics.stream().map(DashboardDailyMetric::getSalesAmount).toList());
-        chart.setOrders(metrics.stream().map(DashboardDailyMetric::getOrderCount).toList());
+        chart.setSales(metrics.stream().map(m -> (Number) m.getSalesAmount()).toList());
+        chart.setOrders(metrics.stream().map(m -> (Number) m.getOrderCount()).toList());
         return chart;
     }
 

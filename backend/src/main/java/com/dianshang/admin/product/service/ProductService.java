@@ -1,6 +1,7 @@
 package com.dianshang.admin.product.service;
 
 import com.dianshang.admin.common.BusinessException;
+import com.dianshang.admin.common.PageResult;
 import com.dianshang.admin.common.TabCountVO;
 import com.dianshang.admin.product.dto.*;
 import com.dianshang.admin.product.entity.Product;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -148,10 +150,47 @@ public class ProductService {
         productRepository.save(product);
     }
 
+    public PageResult<ProductRecycleVO> recycleList(String keyword, int page, int pageSize) {
+        PageRequest pageable = PageRequest.of(Math.max(page - 1, 0), pageSize,
+                Sort.by(Sort.Direction.DESC, "id"));
+        Page<Product> result = productRepository.findAll(ProductSpecifications.forRecycle(keyword), pageable);
+        return new PageResult<>(
+                result.getContent().stream().map(ProductMapper::toRecycleVO).toList(),
+                result.getTotalElements(),
+                page,
+                pageSize
+        );
+    }
+
+    @Transactional
+    public void restore(String productNo) {
+        Product product = requireDeletedProduct(productNo);
+        product.setDeleted(false);
+        product.setDeletedAt(null);
+        productRepository.save(product);
+    }
+
+    @Transactional
+    public void batchRestore(List<String> ids) {
+        ids.forEach(this::restore);
+    }
+
+    @Transactional
+    public void purge(String productNo) {
+        Product product = requireDeletedProduct(productNo);
+        productRepository.delete(product);
+    }
+
+    @Transactional
+    public void batchPurge(List<String> ids) {
+        ids.forEach(this::purge);
+    }
+
     @Transactional
     public void delete(String productNo) {
         Product product = requireProduct(productNo);
         product.setDeleted(true);
+        product.setDeletedAt(LocalDateTime.now());
         productRepository.save(product);
     }
 
@@ -193,5 +232,10 @@ public class ProductService {
     private Product requireProduct(String productNo) {
         return productRepository.findByProductNoAndDeletedFalse(productNo)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
+    }
+
+    private Product requireDeletedProduct(String productNo) {
+        return productRepository.findByProductNoAndDeletedTrue(productNo)
+                .orElseThrow(() -> new BusinessException("回收站中未找到该商品"));
     }
 }

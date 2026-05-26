@@ -11,4 +11,5 @@ public class ProductPickerVO {
     private String name;
     private BigDecimal price;
     private Integer stock;
+    private String thumb;
 }

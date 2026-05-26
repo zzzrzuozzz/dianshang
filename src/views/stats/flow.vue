@@ -34,7 +34,7 @@
               <el-tab-pane label="累计用户" name="total" />
             </el-tabs>
             <div class="time-actions">
-              <el-radio-group v-model="timeRange" size="small">
+              <el-radio-group v-model="timeRange" size="small" @change="fetchFlowStatistics">
                 <el-radio-button value="week">本周</el-radio-button>
                 <el-radio-button value="month">本月</el-radio-button>
               </el-radio-group>
@@ -91,19 +91,27 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
 import { User } from '@element-plus/icons-vue'
 import { useChartGroup } from '@/composables/useChartGroup'
-import { flowKpis, userTrendData, versionRose, channelRose, dateLabels } from '@/mock/stats'
+import { fetchFlowReport } from '@/api/stats'
 
 const loading = ref(false)
 const chartLoading = ref(false)
-const kpiList = reactive([...flowKpis])
+const kpiList = reactive([])
 const userTab = ref('new')
 const versionTab = ref('new')
 const pageTab = ref('home')
 const channelTab = ref('new')
 const timeRange = ref('week')
+
+const flowData = reactive({
+  dates: [],
+  userTrend: {},
+  versionRose: {},
+  pageTrend: {},
+  channelRose: {},
+})
 
 const userTrendRef = ref(null)
 const versionRoseRef = ref(null)
@@ -115,12 +123,12 @@ const { initChart, setOption, resizeAll, disposeAll } = useChartGroup()
 const buildAreaLine = (data, color = '#f56c6c') => ({
   tooltip: { trigger: 'axis' },
   grid: { left: '3%', right: '4%', bottom: '3%', top: 24, containLabel: true },
-  xAxis: { type: 'category', boundaryGap: false, data: dateLabels },
+  xAxis: { type: 'category', boundaryGap: false, data: flowData.dates },
   yAxis: { type: 'value' },
   series: [{
     type: 'line',
     smooth: true,
-    data,
+    data: data || [],
     label: { show: true, position: 'top' },
     lineStyle: { color },
     itemStyle: { color },
@@ -146,33 +154,37 @@ const buildRose = (data, colors) => ({
     center: ['50%', '45%'],
     roseType: 'radius',
     itemStyle: { borderRadius: 4 },
-    data,
+    data: (data || []).map((d) => ({ name: d.name, value: d.value })),
     color: colors,
   }],
 })
 
 const renderUserChart = () => {
   if (!userTrendRef.value) return
+  const data = flowData.userTrend[userTab.value] || []
   initChart(userTrendRef.value, 'userTrend')
-  setOption('userTrend', buildAreaLine(userTrendData, '#f56c6c'), true)
+  setOption('userTrend', buildAreaLine(data, '#f56c6c'), true)
 }
 
 const renderVersionChart = () => {
   if (!versionRoseRef.value) return
+  const data = flowData.versionRose[versionTab.value] || flowData.versionRose.new || []
   initChart(versionRoseRef.value, 'versionRose')
-  setOption('versionRose', buildRose(versionRose, ['#409eff', '#17a2b8', '#67c23a', '#e6a23c', '#f56c6c']), true)
+  setOption('versionRose', buildRose(data, ['#409eff', '#17a2b8', '#67c23a', '#e6a23c', '#f56c6c']), true)
 }
 
 const renderPageChart = () => {
   if (!pageTrendRef.value) return
+  const data = flowData.pageTrend[pageTab.value] || []
   initChart(pageTrendRef.value, 'pageTrend')
-  setOption('pageTrend', buildAreaLine(userTrendData, '#e6a23c'), true)
+  setOption('pageTrend', buildAreaLine(data, '#e6a23c'), true)
 }
 
 const renderChannelChart = () => {
   if (!channelRoseRef.value) return
+  const data = flowData.channelRose[channelTab.value] || flowData.channelRose.new || []
   initChart(channelRoseRef.value, 'channelRose')
-  setOption('channelRose', buildRose(channelRose, ['#ff9f7f', '#ffdb5c', '#fb7293', '#e062ae', '#e690d1']), true)
+  setOption('channelRose', buildRose(data, ['#ff9f7f', '#ffdb5c', '#fb7293', '#e062ae', '#e690d1']), true)
 }
 
 const initFlowCharts = () => {
@@ -183,14 +195,17 @@ const initFlowCharts = () => {
   resizeAll()
 }
 
-/**
- * POST /api/stats/flow/report
- */
 const fetchFlowStatistics = async () => {
   loading.value = true
   chartLoading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 500))
+    const data = await fetchFlowReport({ range: timeRange.value })
+    kpiList.splice(0, kpiList.length, ...(data.kpis || []))
+    flowData.dates = data.dates || []
+    flowData.userTrend = data.userTrend || {}
+    flowData.versionRose = data.versionRose || {}
+    flowData.pageTrend = data.pageTrend || {}
+    flowData.channelRose = data.channelRose || {}
     await nextTick()
     initFlowCharts()
   } finally {
@@ -204,6 +219,10 @@ const handleResize = () => resizeAll()
 onMounted(() => {
   fetchFlowStatistics()
   window.addEventListener('resize', handleResize)
+})
+
+onActivated(() => {
+  fetchFlowStatistics()
 })
 
 onBeforeUnmount(() => {

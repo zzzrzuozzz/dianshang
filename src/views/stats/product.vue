@@ -3,7 +3,7 @@
     <el-row :gutter="16" class="stats-row">
       <el-col :xs="24" :lg="12">
         <el-card v-loading="tableLoading" shadow="hover" class="panel-card">
-          <StatsCardHeader title="一级类目分析" @time-change="fetchCategoryStats" />
+          <StatsCardHeader title="一级类目分析" @time-change="onTimeChange" @custom-change="onCustomChange" />
           <el-table :data="categoryTable" border stripe size="small">
             <el-table-column prop="name" label="分类名称" min-width="90" />
             <el-table-column prop="qty" label="销售数量" width="90" align="center" />
@@ -19,20 +19,22 @@
               layout="prev, pager, next, sizes"
               background
               small
+              @current-change="fetchCategoryStats"
+              @size-change="onCatSizeChange"
             />
           </div>
         </el-card>
       </el-col>
       <el-col :xs="24" :lg="12">
         <el-card v-loading="chartLoading" shadow="hover" class="panel-card">
-          <StatsCardHeader title="一级类目分析图标" @time-change="fetchCategoryStats" />
+          <StatsCardHeader title="一级类目分析图标" @time-change="onTimeChange" @custom-change="onCustomChange" />
           <div ref="categoryPieRef" class="chart-box chart-box--lg" />
         </el-card>
       </el-col>
     </el-row>
 
     <el-card v-loading="tableLoading" shadow="hover" class="panel-card">
-      <StatsCardHeader title="商品销售分析" @time-change="fetchProductRankingList" />
+      <StatsCardHeader title="商品销售分析" @time-change="onTimeChange" @custom-change="onCustomChange" />
       <el-table :data="productTable" border stripe>
         <el-table-column prop="name" label="商品名称" min-width="120" />
         <el-table-column prop="pv" label="浏览量" width="90" align="center" />
@@ -51,6 +53,8 @@
           :total="rankTotal"
           layout="prev, pager, next, sizes"
           background
+          @current-change="fetchProductRankingList"
+          @size-change="onRankSizeChange"
         />
       </div>
     </el-card>
@@ -58,26 +62,63 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
 import StatsCardHeader from '@/components/stats/StatsCardHeader.vue'
 import { useChartGroup } from '@/composables/useChartGroup'
-import { categoryTable as mockCategoryTable, categoryPie, productRanking } from '@/mock/stats'
+import { fetchProductCategory, fetchProductRanking } from '@/api/stats'
 
 const loading = ref(false)
 const tableLoading = ref(false)
 const chartLoading = ref(false)
 
 const categoryTable = ref([])
+const categoryPie = ref([])
 const productTable = ref([])
 const catPage = ref(1)
 const catPageSize = ref(10)
-const catTotal = ref(265)
+const catTotal = ref(0)
 const rankPage = ref(1)
 const rankPageSize = ref(10)
-const rankTotal = ref(265)
+const rankTotal = ref(0)
+
+const query = ref({ range: 'week', startDate: '', endDate: '' })
 
 const categoryPieRef = ref(null)
 const { initChart, setOption, resizeAll, disposeAll } = useChartGroup()
+
+const formatDate = (d) => {
+  if (!d) return ''
+  const dt = d instanceof Date ? d : new Date(d)
+  const y = dt.getFullYear()
+  const m = String(dt.getMonth() + 1).padStart(2, '0')
+  const day = String(dt.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const statsParams = () => ({
+  range: query.value.startDate ? undefined : query.value.range,
+  startDate: query.value.startDate || undefined,
+  endDate: query.value.endDate || undefined,
+})
+
+const onTimeChange = (range) => {
+  query.value = { range: range || 'week', startDate: '', endDate: '' }
+  catPage.value = 1
+  rankPage.value = 1
+  loadAll()
+}
+
+const onCustomChange = (range) => {
+  if (!range || range.length !== 2) return
+  query.value = {
+    range: 'week',
+    startDate: formatDate(range[0]),
+    endDate: formatDate(range[1]),
+  }
+  catPage.value = 1
+  rankPage.value = 1
+  loadAll()
+}
 
 const buildCategoryPieOption = () => ({
   tooltip: { trigger: 'item' },
@@ -86,7 +127,7 @@ const buildCategoryPieOption = () => ({
     type: 'pie',
     radius: ['35%', '58%'],
     center: ['50%', '42%'],
-    data: categoryPie,
+    data: categoryPie.value.map((c) => ({ name: c.name, value: c.value })),
     label: {
       formatter: '{b}\n{c}',
       lineHeight: 16,
@@ -101,15 +142,18 @@ const renderCategoryPie = () => {
   setOption('categoryPie', buildCategoryPieOption(), true)
 }
 
-/**
- * POST /api/stats/product/category
- */
 const fetchCategoryStats = async () => {
   tableLoading.value = true
   chartLoading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    categoryTable.value = [...mockCategoryTable]
+    const data = await fetchProductCategory({
+      ...statsParams(),
+      page: catPage.value,
+      pageSize: catPageSize.value,
+    })
+    categoryTable.value = data.list || []
+    categoryPie.value = data.pie || []
+    catTotal.value = data.total || 0
     await nextTick()
     renderCategoryPie()
   } finally {
@@ -118,17 +162,29 @@ const fetchCategoryStats = async () => {
   }
 }
 
-/**
- * POST /api/stats/product/ranking
- */
 const fetchProductRankingList = async () => {
   tableLoading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    productTable.value = [...productRanking]
+    const data = await fetchProductRanking({
+      ...statsParams(),
+      page: rankPage.value,
+      pageSize: rankPageSize.value,
+    })
+    productTable.value = data.list || []
+    rankTotal.value = data.total || 0
   } finally {
     tableLoading.value = false
   }
+}
+
+const onCatSizeChange = () => {
+  catPage.value = 1
+  fetchCategoryStats()
+}
+
+const onRankSizeChange = () => {
+  rankPage.value = 1
+  fetchProductRankingList()
 }
 
 const loadAll = async () => {
@@ -147,6 +203,10 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
 })
 
+onActivated(() => {
+  loadAll()
+})
+
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   disposeAll()
@@ -156,8 +216,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .stats-page { padding: 16px; background: #f5f7fa; min-height: calc(100vh - 88px); }
 .stats-row { margin-bottom: 16px; }
-.panel-card { border: none; border-radius: 8px; margin-bottom: 16px; }
-.chart-box { width: 100%; height: 380px; }
-.chart-box--lg { height: 420px; }
-.pagination-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: #606266; }
+.panel-card { border: none; border-radius: 8px; }
+.chart-box { width: 100%; height: 320px; }
+.chart-box--lg { height: 360px; }
+.pagination-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 12px; }
 </style>

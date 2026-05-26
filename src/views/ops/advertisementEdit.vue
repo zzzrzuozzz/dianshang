@@ -31,16 +31,7 @@
         </el-form-item>
 
         <el-form-item label="封面图">
-          <div class="cover-list">
-            <div v-for="(img, idx) in advForm.coverImages" :key="idx" class="cover-item">
-              <img :src="img" alt="cover" />
-              <span class="cover-remove" @click="advForm.coverImages.splice(idx, 1)">×</span>
-            </div>
-            <div v-if="advForm.coverImages.length < 5" class="cover-upload" @click="addCover">
-              <span>上传图片</span>
-            </div>
-          </div>
-          <p class="field-hint">仅支持 .jpg .png 格式，最多5张</p>
+          <ImageUploadGrid v-model="advForm.coverImages" :max="5" hint="仅支持 .jpg .png 格式，最多5张" />
         </el-form-item>
 
         <AudienceTargetFields :form="advForm" @estimate-change="calcEstimate" />
@@ -71,21 +62,29 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import ImageUploadGrid from '@/components/common/ImageUploadGrid.vue'
 import AudienceTargetFields from '@/components/ops/AudienceTargetFields.vue'
-import { advTypeOptions, createEmptyPushForm } from '@/mock/ops'
+import {
+  advTypeOptions,
+  createEmptyPushForm,
+  fetchAdvertisementDetail,
+  saveAdvertisement,
+  estimateAudience,
+} from '@/api/ops'
 
 const route = useRoute()
 const router = useRouter()
 const formRef = ref()
 const submitting = ref(false)
-const isEdit = computed(() => Boolean(route.params.id && route.params.id !== 'new'))
+const isEdit = computed(() => Boolean(route.params.id))
 
 const base = createEmptyPushForm()
 const advForm = reactive({
   ...base,
+  advCode: '',
   category: '',
   title: '',
   intro: '',
@@ -101,18 +100,45 @@ const rules = {
 }
 
 const calcEstimate = async () => {
-  await new Promise((r) => setTimeout(r, 200))
-  advForm.estimatedUsers = 5000 + Math.floor(Math.random() * 3000)
+  try {
+    const data = await estimateAudience({
+      memberLevels: advForm.memberLevels,
+      regions: advForm.regions,
+      tags: advForm.tags,
+    })
+    advForm.estimatedUsers = data.estimatedUsers
+  } catch {
+    advForm.estimatedUsers = 0
+  }
 }
 
-const addCover = () => {
-  advForm.coverImages.push('https://picsum.photos/120/120?random=' + Date.now())
+watch(
+  () => [advForm.memberLevels, advForm.regions],
+  () => calcEstimate(),
+  { deep: true },
+)
+
+const loadDetail = async () => {
+  if (!isEdit.value) return
+  const detail = await fetchAdvertisementDetail(String(route.params.id))
+  advForm.advCode = detail.advCode
+  advForm.category = detail.category
+  advForm.title = detail.title
+  advForm.intro = detail.intro || ''
+  advForm.jumpType = detail.jumpType || 'INNER'
+  advForm.jumpUrl = detail.jumpUrl || ''
+  advForm.detail = detail.detail || ''
+  advForm.coverImages = detail.coverImages || []
+  advForm.memberLevels = detail.memberLevels || ['all']
+  advForm.regions = detail.regions || []
+  advForm.tags = detail.tags || advForm.tags
+  advForm.startTime = detail.startTime || ''
+  advForm.endTime = detail.endTime || ''
+  advForm.online = detail.online !== false
+  advForm.appPush = Boolean(detail.appPush)
+  advForm.estimatedUsers = detail.estimatedUsers || 0
 }
 
-/**
- * POST /api/ops/advertisement/save
- * C 端高频读取，保存/上下架后务必同步刷新或清除 Redis 广告列表缓存。
- */
 const submitAdvertisement = async () => {
   await formRef.value?.validate().catch(() => {
     ElMessage.warning('请完善必填项')
@@ -120,8 +146,24 @@ const submitAdvertisement = async () => {
   })
   submitting.value = true
   try {
-    await new Promise((r) => setTimeout(r, 600))
-    console.log('[mock] save advertisement', advForm)
+    await saveAdvertisement({
+      advCode: advForm.advCode || undefined,
+      category: advForm.category,
+      title: advForm.title,
+      intro: advForm.intro,
+      jumpType: advForm.jumpType,
+      jumpUrl: advForm.jumpUrl,
+      detail: advForm.detail,
+      coverImages: advForm.coverImages,
+      memberLevels: advForm.memberLevels,
+      regions: advForm.regions,
+      tags: advForm.tags,
+      startTime: advForm.startTime,
+      endTime: advForm.endTime,
+      online: advForm.online,
+      appPush: advForm.appPush,
+      estimatedUsers: advForm.estimatedUsers,
+    })
     ElMessage.success('保存成功')
     router.push('/ops/advertisement')
   } finally {
@@ -129,7 +171,12 @@ const submitAdvertisement = async () => {
   }
 }
 
-onMounted(calcEstimate)
+onMounted(async () => {
+  if (isEdit.value) {
+    await loadDetail()
+  }
+  calcEstimate()
+})
 </script>
 
 <style scoped>
@@ -138,11 +185,6 @@ onMounted(calcEstimate)
 .section-title { font-weight: 600; }
 .adv-form { max-width: 900px; }
 .field-hint { font-size: 12px; color: #909399; margin-top: 4px; }
-.cover-list { display: flex; flex-wrap: wrap; gap: 12px; }
-.cover-item { position: relative; width: 100px; height: 100px; border-radius: 4px; overflow: hidden; }
-.cover-item img { width: 100%; height: 100%; object-fit: cover; }
-.cover-remove { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: #f56c6c; color: #fff; border-radius: 50%; text-align: center; line-height: 18px; cursor: pointer; }
-.cover-upload { width: 100px; height: 100px; border: 1px dashed #dcdfe6; display: flex; align-items: center; justify-content: center; color: #909399; cursor: pointer; font-size: 12px; }
 .range-sep { margin: 0 8px; color: #909399; }
 .submit-btn { width: 100%; max-width: 400px; height: 44px; }
 </style>

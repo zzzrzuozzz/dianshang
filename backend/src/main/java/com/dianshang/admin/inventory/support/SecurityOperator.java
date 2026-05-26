@@ -1,7 +1,7 @@
 package com.dianshang.admin.inventory.support;
 
-import com.dianshang.admin.user.entity.AdminUser;
-import com.dianshang.admin.user.repository.AdminUserRepository;
+import com.dianshang.admin.user.AdminUser;
+import com.dianshang.admin.user.AdminUserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 

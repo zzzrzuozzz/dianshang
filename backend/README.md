@@ -13,6 +13,10 @@ mvn spring-boot:run
 
 默认账号：`admin` / `admin123`
 
+若此前启动失败导致 H2 库不完整，请先删除 `backend/data/dianshang.mv.db*` 再启动。
+
+国标区划在首次启动时由 `RegionFullSqlImporter` 导入（不再每次执行 `region-full.sql`）。
+
 ## 模块3 订单管理接口
 
 | 方法 | 路径 | 说明 |
@@ -31,6 +35,29 @@ mvn spring-boot:run
 | GET/POST/PUT/DELETE | `/api/order/setting/address/...?type=ship\|return` | 发货/退货地址 CRUD |
 | GET | `/api/system/region/list-by-parent?parentCode=0` | 省市区懒加载（完整国标见 `region/region-full.sql`） |
 | GET | `/api/ops/express/preview/{orderId}` | 快递单套打预览数据 |
+
+## 运营模块接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/ops/notification/list` | 推送列表（`msgType=SYSTEM\|SMS\|STATION`，`tab` 分类/状态） |
+| GET | `/api/ops/notification/{notifyCode}` | 推送详情 |
+| POST | `/api/ops/notification/save` | 保存推送（系统/短信/站内信） |
+| POST | `/api/ops/notification/estimate` | 预估触达人数 |
+| POST | `/api/ops/notification/{notifyCode}/resend` | 发送/再发 |
+| DELETE | `/api/ops/notification/{notifyCode}` | 删除推送 |
+| POST | `/api/ops/notification/batch/delete` | 批量删除 `{ "ids": ["NT6550"] }` |
+| POST | `/api/ops/notification/batch/resend` | 批量发送/再发 |
+| POST | `/api/upload/image?biz=ops` | 图片上传（multipart，返回 `{ "url": "/uploads/ops/..." }`） |
+| GET | `/api/ops/advertisement/list` | 广告位列表 |
+| GET | `/api/ops/advertisement/{advCode}` | 广告详情（编辑回显） |
+| POST | `/api/ops/advertisement/save` | 新增/编辑广告 |
+| POST | `/api/ops/advertisement/{advCode}/online` | 上下架 `{ "online": true }` |
+| POST | `/api/ops/advertisement/{advCode}/pin` | 置顶 |
+| DELETE | `/api/ops/advertisement/{advCode}` | 删除广告 |
+| GET | `/api/ops/global/search` | 全局搜索（`keyword`，商品/订单/用户各最多 5 条） |
+
+启动后 `OpsDataInitializer` 会写入演示推送与广告数据。
 
 ## 模块4 库存管理接口
 
@@ -51,7 +78,11 @@ mvn spring-boot:run
 | GET | `/api/product/list` | 商品列表（含 Tab 计数） |
 | GET | `/api/product/audit/list` | 审核列表 |
 | PUT | `/api/product/{id}/status` | 上/下架 |
-| DELETE | `/api/product/{id}` | 删除 |
+| DELETE | `/api/product/{id}` | 删除（移入回收站） |
+| GET | `/api/product/recycle/list` | 回收站列表 |
+| POST | `/api/product/recycle/restore` | 恢复 `{ "ids": ["025345"] }` |
+| DELETE | `/api/product/recycle/{productNo}` | 彻底删除 |
+| DELETE | `/api/product/recycle/batch` | 批量彻底删除 |
 | POST | `/api/product/batch/on` | 批量上架 |
 | POST | `/api/product/batch/off` | 批量下架 |
 | DELETE | `/api/product/batch` | 批量删除 |
@@ -63,6 +94,29 @@ mvn spring-boot:run
 | GET | `/api/product/brand/list` | 品牌列表 |
 | GET | `/api/product/comment/overview` | 评价看板 |
 | GET | `/api/product/comment/list` | 评价列表 |
+
+## 内容管理接口（`/api/content`）
+
+| 模块 | 主要路径 |
+|------|----------|
+| 专题类型 | `GET/POST /topic/type/list|save|options`，`GET/DELETE /topic/type/{id}`，`PUT /topic/type/{id}/visible` |
+| 专题 | `GET /topic/list`，`GET /topic/detail/{code}`，`GET /topic/{code}`，`POST /topic/save`，`PUT /topic/{code}/status` |
+| 专题评论 | `POST /topic/comment/reply|review`，`DELETE /topic/comment/{code}`，`POST /topic/comment/batch/delete` |
+| 帮助分类 | `GET/POST /help/type/list|save|options`，`GET/DELETE /help/type/{id}` |
+| 帮助文章 | `GET /help/list`，`GET /help/{code}`，`POST /help/save`，`PUT /help/{code}/status` |
+
+`ContentDataInitializer` 在表为空时写入演示数据。商品选择复用 `GET /api/promotion/products/picker`。
+
+## 数据统计接口（`/api/stats`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/stats/transaction/overview` | 交易统计（KPI、趋势、漏斗、价格区间、来源/设备等），参数 `range=week\|month` 或 `startDate`+`endDate` |
+| GET | `/api/stats/flow/report` | 流量统计（用户趋势、版本/渠道玫瑰图、页面访问） |
+| GET | `/api/stats/product/category` | 商品类目分析表 + 饼图数据，分页 `page`/`pageSize` |
+| GET | `/api/stats/product/ranking` | 商品销售排行，分页 `page`/`pageSize` |
+
+数据由 `oms_order`、`ums_member`、`pms_product`、`pms_category` 与 `dashboard_daily_metric` 聚合；订单/指标变更后图表随接口刷新。
 
 ## 模块1 接口
 

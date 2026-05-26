@@ -2,6 +2,7 @@ package com.dianshang.admin.product.controller;
 
 import com.dianshang.admin.common.ApiResponse;
 import com.dianshang.admin.common.PageResult;
+import com.dianshang.admin.product.dto.ProductRecycleVO;
 import com.dianshang.admin.common.TreeNodeVO;
 import com.dianshang.admin.product.dto.*;
 import com.dianshang.admin.product.service.BrandService;
@@ -95,6 +96,36 @@ public class ProductController {
     @DeleteMapping("/batch")
     public ApiResponse<Void> batchDelete(@Valid @RequestBody IdsRequest request) {
         productService.batchDelete(request.getIds());
+        return ApiResponse.ok(null);
+    }
+
+    @GetMapping("/recycle/list")
+    public ApiResponse<PageResult<ProductRecycleVO>> recycleList(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return ApiResponse.ok(productService.recycleList(keyword, page, pageSize));
+    }
+
+    @PostMapping("/recycle/restore")
+    public ApiResponse<Void> restoreRecycle(@Valid @RequestBody IdsRequest request) {
+        if (request.getIds().size() == 1) {
+            productService.restore(request.getIds().get(0));
+        } else {
+            productService.batchRestore(request.getIds());
+        }
+        return ApiResponse.ok(null);
+    }
+
+    @DeleteMapping("/recycle/{productNo}")
+    public ApiResponse<Void> purgeRecycle(@PathVariable String productNo) {
+        productService.purge(productNo);
+        return ApiResponse.ok(null);
+    }
+
+    @DeleteMapping("/recycle/batch")
+    public ApiResponse<Void> batchPurgeRecycle(@Valid @RequestBody IdsRequest request) {
+        productService.batchPurge(request.getIds());
         return ApiResponse.ok(null);
     }
 

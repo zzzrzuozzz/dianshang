@@ -28,7 +28,7 @@
       <div class="toolbar">
         <el-checkbox>全选</el-checkbox>
         <div class="toolbar-right">
-          <el-tabs v-model="activeTab" @tab-change="fetchAdvertisements">
+          <el-tabs v-model="activeTab" @tab-change="onTabChange">
             <el-tab-pane label="全部" name="all" />
             <el-tab-pane label="上线" name="online" />
             <el-tab-pane label="下架" name="offline" />
@@ -72,7 +72,15 @@
       </el-table>
       <div class="pagination-bar">
         <span>第{{ pagination.page }}页 共{{ pagination.totalPages }}页 {{ pagination.total }}条</span>
-        <el-pagination v-model:current-page="pagination.page" :total="pagination.total" layout="prev, pager, next, sizes" background />
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :total="pagination.total"
+          layout="prev, pager, next, sizes"
+          background
+          @current-change="fetchAdvertisements"
+          @size-change="onSizeChange"
+        />
       </div>
     </el-card>
   </div>
@@ -82,52 +90,86 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockAdvertisements } from '@/mock/ops'
+import {
+  fetchAdvertisementList,
+  toggleAdvertisementOnline,
+  pinAdvertisement,
+  deleteAdvertisement,
+} from '@/api/ops'
 
 const router = useRouter()
 const loading = ref(false)
 const activeTab = ref('all')
 const tableData = ref([])
 
-const searchForm = reactive({ title: '', timeType: 'publish', dateRange: ['2024-08-02', '2024-08-23'] })
-const pagination = reactive({ page: 1, total: 265, totalPages: 10 })
+const searchForm = reactive({ title: '', timeType: 'publish', dateRange: null })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0, totalPages: 1 })
 
-/**
- * POST /api/ops/advertisement/page
- * 上下架时需同步刷新 Redis 广告缓存（String/ZSet）
- */
 const fetchAdvertisements = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    let list = [...mockAdvertisements]
-    if (activeTab.value === 'online') list = list.filter((i) => i.status === 1)
-    if (activeTab.value === 'offline') list = list.filter((i) => i.status === 0)
-    tableData.value = list
+    const [startDate, endDate] = searchForm.dateRange || []
+    const data = await fetchAdvertisementList({
+      tab: activeTab.value,
+      title: searchForm.title || undefined,
+      startDate,
+      endDate,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => { fetchAdvertisements(); ElMessage.success('查询成功') }
+const onTabChange = () => {
+  pagination.page = 1
+  fetchAdvertisements()
+}
+
+const onSizeChange = () => {
+  pagination.page = 1
+  fetchAdvertisements()
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  fetchAdvertisements()
+  ElMessage.success('查询成功')
+}
+
 const handleReset = () => {
   searchForm.title = ''
-  searchForm.dateRange = ['2024-08-02', '2024-08-23']
+  searchForm.dateRange = null
   activeTab.value = 'all'
+  pagination.page = 1
   fetchAdvertisements()
 }
 
 const toggleStatus = async (row) => {
-  row.status = row.status === 1 ? 0 : 1
-  row.statusText = row.status === 1 ? '已上线' : '已下架'
-  ElMessage.success('状态已更新（联调时后端需清除 Redis 缓存）')
+  const online = row.status !== 1
+  await toggleAdvertisementOnline(row.id, online)
+  ElMessage.success(online ? '已上线' : '已下架')
+  fetchAdvertisements()
 }
 
 const handleView = (row) => router.push(`/ops/advertisement/edit/${row.id}`)
-const handlePin = (row) => ElMessage.success(`${row.name} 已置顶`)
+const handlePin = async (row) => {
+  await pinAdvertisement(row.id)
+  ElMessage.success(`${row.name} 已置顶`)
+  fetchAdvertisements()
+}
+
 const handleDelete = (row) => {
   ElMessageBox.confirm('确定删除该广告吗？', '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteAdvertisement(row.id)
+      ElMessage.success('删除成功')
+      fetchAdvertisements()
+    })
     .catch(() => {})
 }
 

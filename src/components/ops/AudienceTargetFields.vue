@@ -29,18 +29,38 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import AreaCascader from '@/components/AreaCascader/index.vue'
-import { memberLevelOptions, tagGroups } from '@/mock/ops'
+import { memberLevelOptions, tagGroups } from '@/api/ops'
 
-defineProps({
+const props = defineProps({
   form: { type: Object, required: true },
 })
 
 const emit = defineEmits(['edit-tags', 'estimate-change'])
 
+const ensureTagShape = () => {
+  if (!props.form.tags || typeof props.form.tags !== 'object') {
+    props.form.tags = {}
+  }
+  tagGroups.forEach((group) => {
+    if (!Array.isArray(props.form.tags[group.key])) {
+      props.form.tags[group.key] = ['all']
+    }
+  })
+  if (!Array.isArray(props.form.memberLevels) || !props.form.memberLevels.length) {
+    props.form.memberLevels = ['all']
+  }
+  if (!Array.isArray(props.form.regions)) {
+    props.form.regions = []
+  }
+}
+
 const onTagsChange = () => {
   emit('estimate-change')
 }
+
+onMounted(ensureTagShape)
 </script>
 
 <style scoped>

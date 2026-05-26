@@ -3,10 +3,12 @@ package com.dianshang.admin.config;
 import com.dianshang.admin.system.entity.RegionEntity;
 import com.dianshang.admin.system.repository.RegionRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /** 演示种子；完整国标由 region/region-full.sql 导入，仅表为空时生效。 */
 @Component
+@Order(30)
 public class RegionDataInitializer implements CommandLineRunner {
 
     private final RegionRepository regionRepository;

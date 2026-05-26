@@ -94,7 +94,12 @@ public class OrderDataInitializer implements CommandLineRunner {
         o.setLogistics(logistics);
         o.setPayTime(parseTime(payTime));
         o.setAutoConfirmTime(parseTime(autoConfirm));
-        o.setCreateTime(LocalDateTime.of(2024, 8, 2, 16, 29));
+        LocalDateTime created = parseTime(payTime);
+        if (created == null) {
+            int offset = Math.abs(orderNo.hashCode() % 14);
+            created = LocalDateTime.now().minusDays(offset).withHour(10).withMinute(0).withSecond(0);
+        }
+        o.setCreateTime(created);
         o.setReceiverName(receiverName);
         o.setReceiverPhone(phone);
         o.setReceiverAddress(address);

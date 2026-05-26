@@ -7,6 +7,7 @@
     :show-app-push="true"
     :show-msg-type="true"
     :show-click-count="true"
+    :show-presets="true"
     :category-tabs="categoryTabs"
   />
 </template>

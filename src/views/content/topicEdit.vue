@@ -1,5 +1,5 @@
 <template>
-  <div class="topic-edit-page">
+  <div v-loading="loading" class="topic-edit-page">
     <el-card shadow="never" class="panel-card">
       <template #header><span class="section-title">{{ isEdit ? '编辑专题' : '新增专题' }}</span></template>
       <el-form ref="formRef" :model="topicForm" :rules="rules" label-width="120px" class="topic-form">
@@ -16,27 +16,16 @@
         </el-form-item>
         <el-form-item label="详情">
           <div class="rich-editor-wrap">
-            <div class="rich-toolbar">
-              <el-button size="small">B</el-button>
-              <el-button size="small">对齐</el-button>
-              <el-button size="small">列表</el-button>
-              <el-button size="small">图片</el-button>
-              <el-button size="small">链接</el-button>
-            </div>
-            <el-input v-model="topicForm.content" type="textarea" :rows="8" placeholder="富文本详情（联调时替换编辑器）" />
+            <el-input v-model="topicForm.content" type="textarea" :rows="8" placeholder="富文本详情" />
           </div>
         </el-form-item>
         <el-form-item label="封面图">
-          <div class="cover-upload">
-            <div v-if="topicForm.coverImage" class="cover-preview">
-              <img :src="topicForm.coverImage" alt="cover" />
-              <span class="cover-remove" @click="topicForm.coverImage = ''">×</span>
-            </div>
-            <div v-else class="cover-placeholder" @click="uploadCover">
-              <span>上传图片</span>
-            </div>
-          </div>
-          <p class="hint">仅支持 .jpg .png，建议单张封面</p>
+          <ImageUploadGrid
+            :model-value="topicForm.coverImage ? [topicForm.coverImage] : []"
+            :max="1"
+            biz="content"
+            @update:model-value="(urls) => { topicForm.coverImage = urls[0] || '' }"
+          />
         </el-form-item>
 
         <el-form-item label="关联商品">
@@ -51,6 +40,7 @@
 
         <el-form-item>
           <el-button type="primary" class="submit-btn" :loading="submitting" @click="submitTopic">提交</el-button>
+          <el-button @click="router.back()">取消</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -60,19 +50,27 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import ImageUploadGrid from '@/components/common/ImageUploadGrid.vue'
 import AudienceTargetFields from '@/components/ops/AudienceTargetFields.vue'
 import ProductPickDialog from '@/components/content/ProductPickDialog.vue'
-import { createTopicForm, mockTopicTypes } from '@/mock/content'
+import { estimateAudience } from '@/api/ops'
+import {
+  createTopicForm,
+  fetchTopicForEdit,
+  fetchTopicTypeOptions,
+  saveTopic,
+} from '@/api/content'
 
 const route = useRoute()
 const router = useRouter()
 const formRef = ref()
+const loading = ref(false)
 const submitting = ref(false)
 const pickVisible = ref(false)
-const topicTypes = ref([...mockTopicTypes])
+const topicTypes = ref([])
 const topicForm = reactive(createTopicForm())
 
 const isEdit = computed(() => Boolean(route.params.id))
@@ -82,23 +80,55 @@ const rules = {
   title: [{ required: true, message: '请输入专题标题', trigger: 'blur' }],
 }
 
-const uploadCover = () => {
-  topicForm.coverImage = 'https://picsum.photos/200/200?random=cover'
-}
-
 const onProductsPicked = ({ ids }) => {
   topicForm.productIds = ids
 }
 
 const calcEstimate = async () => {
-  await new Promise((r) => setTimeout(r, 200))
-  topicForm.estimatedUsers = 5000 + Math.floor(Math.random() * 3000)
+  try {
+    const data = await estimateAudience({
+      memberLevels: topicForm.memberLevels,
+      regions: topicForm.regions,
+      tags: topicForm.tags,
+    })
+    topicForm.estimatedUsers = data.estimatedUsers
+  } catch {
+    topicForm.estimatedUsers = 0
+  }
 }
 
-/**
- * POST /api/content/topic/save
- * 选中的商品 ID 数组需转为逗号分隔字符串或 JSON 传给后端（product_ids 字段）
- */
+watch(
+  () => [topicForm.memberLevels, topicForm.regions],
+  () => calcEstimate(),
+  { deep: true },
+)
+
+const applyDetail = (data) => {
+  topicForm.topicCode = data.id
+  topicForm.typeId = data.typeId
+  topicForm.title = data.title || ''
+  topicForm.intro = data.intro || ''
+  topicForm.content = data.content || ''
+  topicForm.coverImage = data.coverImage || data.images?.[0] || ''
+  topicForm.specifyProducts = data.specifyProducts !== false
+  topicForm.productIds = data.productIds ? [...data.productIds] : []
+  topicForm.memberLevels = data.memberLevels?.length ? [...data.memberLevels] : ['all']
+  topicForm.regions = data.regions ? [...data.regions] : []
+  topicForm.tags = data.tags ? { ...data.tags } : topicForm.tags
+  topicForm.sort = data.sort ?? 0
+  topicForm.status = data.status ?? 1
+}
+
+const loadMeta = async () => {
+  topicTypes.value = await fetchTopicTypeOptions()
+}
+
+const loadDetail = async () => {
+  if (!isEdit.value) return
+  const data = await fetchTopicForEdit(String(route.params.id))
+  applyDetail(data)
+}
+
 const submitTopic = async () => {
   await formRef.value?.validate().catch(() => {
     ElMessage.warning('请完善必填项')
@@ -106,25 +136,27 @@ const submitTopic = async () => {
   })
   submitting.value = true
   try {
-    await new Promise((r) => setTimeout(r, 600))
-    const payload = {
+    await saveTopic({
       ...topicForm,
-      product_ids: topicForm.productIds.join(','),
-    }
-    console.log('[mock] save topic', payload)
-    ElMessage.success('提交成功')
+      typeId: Number(topicForm.typeId),
+      topicCode: topicForm.topicCode || (isEdit.value ? String(route.params.id) : undefined),
+      status: topicForm.status ?? 1,
+    })
+    ElMessage.success(isEdit.value ? '保存成功' : '提交成功')
     router.push('/content/topic')
   } finally {
     submitting.value = false
   }
 }
 
-onMounted(() => {
-  calcEstimate()
-  if (isEdit.value) {
-    topicForm.title = '春季家电家具疯狂秒杀'
-    topicForm.typeId = 2
-    topicForm.productIds = ['025342', '025343']
+onMounted(async () => {
+  loading.value = true
+  try {
+    await loadMeta()
+    await loadDetail()
+    calcEstimate()
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -133,13 +165,7 @@ onMounted(() => {
 .topic-edit-page { min-height: calc(100vh - 120px); }
 .panel-card { border-radius: 8px; border: none; }
 .section-title { font-weight: 600; }
-.rich-editor-wrap { width: 100%; max-width: 600px; border: 1px solid #dcdfe6; border-radius: 4px; }
-.rich-toolbar { padding: 8px; border-bottom: 1px solid #ebeef5; display: flex; gap: 4px; }
-.cover-preview, .cover-placeholder { width: 100px; height: 100px; position: relative; border-radius: 4px; }
-.cover-preview img { width: 100%; height: 100%; object-fit: cover; }
-.cover-remove { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: #f56c6c; color: #fff; border-radius: 50%; text-align: center; line-height: 18px; cursor: pointer; }
-.cover-placeholder { border: 1px dashed #dcdfe6; display: flex; align-items: center; justify-content: center; color: #909399; cursor: pointer; font-size: 12px; }
-.hint { font-size: 12px; color: #909399; margin-top: 4px; }
+.rich-editor-wrap { width: 100%; max-width: 600px; border: 1px solid #dcdfe6; border-radius: 4px; padding: 8px; }
 .product-summary { margin: 0 12px; color: #606266; font-size: 13px; }
-.submit-btn { width: 100%; max-width: 400px; height: 44px; }
+.submit-btn { width: 100%; max-width: 400px; height: 44px; margin-right: 12px; }
 </style>

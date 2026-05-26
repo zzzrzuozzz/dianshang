@@ -14,25 +14,26 @@
 
     <el-card shadow="never" class="panel-card">
       <div class="toolbar">
-        <el-tabs v-model="activeTab" @tab-change="fetchTypeList">
+        <el-tabs v-model="activeTab" @tab-change="onTabChange">
           <el-tab-pane :label="`全部 (${counts.all})`" name="all" />
           <el-tab-pane :label="`可用 (${counts.active})`" name="active" />
           <el-tab-pane :label="`已禁用 (${counts.disabled})`" name="disabled" />
         </el-tabs>
         <div class="toolbar-actions">
           <el-button type="primary" @click="router.push('/content/topic/type/add')">+ 添加类型</el-button>
-          <el-button type="danger">批量删除</el-button>
+          <el-button type="danger" :disabled="!selectedRows.length" @click="handleBatchDelete">批量删除</el-button>
         </div>
       </div>
     </el-card>
 
     <el-card shadow="never" class="panel-card">
-      <el-table :data="tableData" border stripe>
+      <el-table ref="tableRef" :data="tableData" row-key="id" border stripe @selection-change="onSelectionChange">
         <el-table-column type="selection" width="48" align="center" />
         <el-table-column prop="code" label="编号" width="100" align="center" />
         <el-table-column label="类型图标" width="90" align="center">
           <template #default="{ row }">
-            <el-image :src="row.icon" style="width: 48px; height: 48px" fit="cover" />
+            <el-image v-if="row.icon" :src="row.icon" style="width: 48px; height: 48px" fit="cover" />
+            <span v-else class="no-icon">—</span>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="类型名称" min-width="120" />
@@ -55,7 +56,15 @@
       </el-table>
       <div class="pagination-bar">
         <span>第{{ pagination.page }}页 共{{ pagination.totalPages }}页 {{ pagination.total }}条</span>
-        <el-pagination v-model:current-page="pagination.page" :total="pagination.total" layout="prev, pager, next, sizes" background />
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :total="pagination.total"
+          layout="prev, pager, next, sizes"
+          background
+          @current-change="fetchTypeList"
+          @size-change="onPageSizeChange"
+        />
       </div>
     </el-card>
   </div>
@@ -65,37 +74,102 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockTopicTypes } from '@/mock/content'
+import {
+  batchDeleteTopicTypes,
+  deleteTopicType,
+  fetchTopicTypeList,
+  toggleTopicTypeVisible,
+} from '@/api/content'
 
 const router = useRouter()
 const loading = ref(false)
 const activeTab = ref('all')
 const tableData = ref([])
+const tableRef = ref()
+const selectedRows = ref([])
 
 const searchForm = reactive({ keyword: '' })
-const pagination = reactive({ page: 1, total: 265, totalPages: 10 })
-const counts = reactive({ all: 50, active: 40, disabled: 10 })
+const pagination = reactive({ page: 1, pageSize: 10, total: 0, totalPages: 1 })
+const counts = reactive({ all: 0, active: 0, disabled: 0 })
 
-/** POST /api/content/topic/type/page */
+const onSelectionChange = (rows) => {
+  selectedRows.value = rows
+}
+
 const fetchTypeList = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 300))
-    let list = [...mockTopicTypes]
-    if (activeTab.value === 'active') list = list.filter((i) => i.visible)
-    if (activeTab.value === 'disabled') list = list.filter((i) => !i.visible)
-    tableData.value = list
+    const data = await fetchTopicTypeList({
+      keyword: searchForm.keyword || undefined,
+      tab: activeTab.value,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    })
+    tableData.value = data.list
+    pagination.total = data.total
+    pagination.totalPages = data.totalPages
+    if (data.counts) {
+      counts.all = data.counts.all ?? 0
+      counts.active = data.counts.active ?? 0
+      counts.disabled = data.counts.disabled ?? 0
+    }
+    selectedRows.value = []
+    tableRef.value?.clearSelection()
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => { fetchTypeList(); ElMessage.success('查询成功') }
-const handleReset = () => { searchForm.keyword = ''; activeTab.value = 'all'; fetchTypeList() }
-const toggleVisible = (row) => { row.visible = !row.visible; ElMessage.success('已更新显示状态') }
+const onTabChange = () => {
+  pagination.page = 1
+  fetchTypeList()
+}
+
+const onPageSizeChange = () => {
+  pagination.page = 1
+  fetchTypeList()
+}
+
+const handleSearch = () => {
+  pagination.page = 1
+  fetchTypeList()
+  ElMessage.success('查询成功')
+}
+
+const handleReset = () => {
+  searchForm.keyword = ''
+  activeTab.value = 'all'
+  pagination.page = 1
+  fetchTypeList()
+}
+
+const toggleVisible = async (row) => {
+  const next = !row.visible
+  await toggleTopicTypeVisible(row.id, next)
+  row.visible = next
+  ElMessage.success('已更新显示状态')
+  fetchTypeList()
+}
+
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定删除类型「${row.name}」吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功'))
+    .then(async () => {
+      await deleteTopicType(row.id)
+      ElMessage.success('删除成功')
+      fetchTypeList()
+    })
+    .catch(() => {})
+}
+
+const handleBatchDelete = () => {
+  const ids = selectedRows.value.map((r) => r.id)
+  if (!ids.length) return
+  ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个类型吗？`, '批量删除', { type: 'warning' })
+    .then(async () => {
+      const { count } = await batchDeleteTopicTypes(ids)
+      ElMessage.success(`已删除 ${count} 条`)
+      fetchTypeList()
+    })
     .catch(() => {})
 }
 
@@ -110,6 +184,7 @@ onMounted(fetchTypeList)
 .toolbar-actions { display: flex; gap: 8px; }
 .text-show { color: #409eff; }
 .text-hide { color: #f56c6c; }
+.no-icon { color: #c0c4cc; }
 .btn-show { color: #67c23a; border-color: #c2e7b0; background: #f0f9eb; }
 .btn-hide { color: #f56c6c; border-color: #fbc4c4; background: #fef0f0; }
 .pagination-bar { display: flex; justify-content: space-between; margin-top: 16px; font-size: 13px; color: #606266; }

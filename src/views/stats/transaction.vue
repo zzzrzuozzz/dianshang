@@ -1,6 +1,5 @@
 <template>
   <div v-loading="loading" class="stats-page">
-    <!-- Row 1: 10 KPI cards -->
     <div class="kpi-grid">
       <el-card v-for="item in kpiList" :key="item.key" shadow="hover" class="kpi-card">
         <div class="kpi-card__body">
@@ -21,11 +20,10 @@
       </el-card>
     </div>
 
-    <!-- Row 2: trend + funnel -->
     <el-row :gutter="16" class="stats-row">
       <el-col :xs="24" :lg="16">
         <el-card v-loading="chartLoading" shadow="hover" class="panel-card">
-          <StatsCardHeader title="订单总览" @time-change="onTimeChange" />
+          <StatsCardHeader title="订单总览" @time-change="onTimeChange" @custom-change="onCustomChange" />
           <div ref="trendRef" class="chart-box chart-box--lg" />
         </el-card>
       </el-col>
@@ -34,37 +32,44 @@
           <div class="panel-title">转化率</div>
           <div ref="funnelRef" class="chart-box chart-box--lg" />
           <ul class="funnel-legend">
-            <li>下单转化率 <strong>5.63%</strong></li>
-            <li>付款转化率 <strong>75.85%</strong></li>
-            <li>成交转化率 <strong>2.85%</strong></li>
+            <li>下单转化率 <strong>{{ funnelRates.orderRate }}%</strong></li>
+            <li>付款转化率 <strong>{{ funnelRates.payRate }}%</strong></li>
+            <li>成交转化率 <strong>{{ funnelRates.dealRate }}%</strong></li>
           </ul>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- Row 3: price bar + user donut -->
     <el-row :gutter="16" class="stats-row">
       <el-col :xs="24" :lg="12">
         <el-card v-loading="chartLoading" shadow="hover" class="panel-card">
-          <StatsCardHeader title="价格区间占比" @time-change="onTimeChange" />
+          <StatsCardHeader title="价格区间占比" @time-change="onTimeChange" @custom-change="onCustomChange" />
           <div ref="priceBarRef" class="chart-box" />
         </el-card>
       </el-col>
       <el-col :xs="24" :lg="12">
         <el-card v-loading="chartLoading" shadow="hover" class="panel-card">
-          <StatsCardHeader title="新老用户占比" @time-change="onTimeChange" />
+          <StatsCardHeader title="新老用户占比" @time-change="onTimeChange" @custom-change="onCustomChange" />
           <div class="split-chart">
             <div ref="userPieRef" class="chart-box chart-box--sm" />
             <div class="user-detail">
               <div class="user-block">
                 <h4>新用户</h4>
-                <p>付款金额 <span>2654.56</span> <em class="trend-down">-16%</em></p>
-                <p>付款人数 <span>35</span> <em class="trend-down">-16%</em></p>
+                <p>付款金额 <span>{{ newUser.payAmount }}</span>
+                  <em :class="newUser.payAmountTrend >= 0 ? 'trend-up' : 'trend-down'">{{ newUser.payAmountTrend }}%</em>
+                </p>
+                <p>付款人数 <span>{{ newUser.payUsers }}</span>
+                  <em :class="newUser.payUsersTrend >= 0 ? 'trend-up' : 'trend-down'">{{ newUser.payUsersTrend }}%</em>
+                </p>
               </div>
               <div class="user-block">
                 <h4>老用户</h4>
-                <p>付款金额 <span>6523.00</span> <em class="trend-down">-16%</em></p>
-                <p>付款人数 <span>654</span> <em class="trend-down">-16%</em></p>
+                <p>付款金额 <span>{{ oldUser.payAmount }}</span>
+                  <em :class="oldUser.payAmountTrend >= 0 ? 'trend-up' : 'trend-down'">{{ oldUser.payAmountTrend }}%</em>
+                </p>
+                <p>付款人数 <span>{{ oldUser.payUsers }}</span>
+                  <em :class="oldUser.payUsersTrend >= 0 ? 'trend-up' : 'trend-down'">{{ oldUser.payUsersTrend }}%</em>
+                </p>
               </div>
             </div>
           </div>
@@ -72,17 +77,18 @@
       </el-col>
     </el-row>
 
-    <!-- Row 4: source + device -->
     <el-row :gutter="16" class="stats-row">
       <el-col :xs="24" :lg="12">
         <el-card v-loading="chartLoading" shadow="hover" class="panel-card">
-          <StatsCardHeader title="来源占比" @time-change="onTimeChange" />
+          <StatsCardHeader title="来源占比" @time-change="onTimeChange" @custom-change="onCustomChange" />
           <div class="split-chart">
             <div ref="sourcePieRef" class="chart-box chart-box--sm" />
             <div class="user-detail">
               <div v-for="s in sourceDetail" :key="s.name" class="user-block">
                 <h4>{{ s.name }}</h4>
-                <p>付款金额 <span>{{ s.amount }}</span> <em :class="s.trend >= 0 ? 'trend-up' : 'trend-down'">{{ s.trend }}%</em></p>
+                <p>付款金额 <span>{{ s.amount }}</span>
+                  <em :class="s.trend >= 0 ? 'trend-up' : 'trend-down'">{{ s.trend }}%</em>
+                </p>
                 <p>付款人数 <span>{{ s.count }}</span></p>
               </div>
             </div>
@@ -91,7 +97,7 @@
       </el-col>
       <el-col :xs="24" :lg="12">
         <el-card v-loading="chartLoading" shadow="hover" class="panel-card">
-          <StatsCardHeader title="设备占比" @time-change="onTimeChange" />
+          <StatsCardHeader title="设备占比" @time-change="onTimeChange" @custom-change="onCustomChange" />
           <div ref="deviceAreaRef" class="chart-box" />
         </el-card>
       </el-col>
@@ -100,16 +106,30 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
 import { TrendCharts } from '@element-plus/icons-vue'
 import StatsCardHeader from '@/components/stats/StatsCardHeader.vue'
 import { useChartGroup } from '@/composables/useChartGroup'
-import { transactionKpis, transactionTrend, priceRangeSeries, dateLabels } from '@/mock/stats'
+import { fetchTransactionOverview } from '@/api/stats'
 
 const loading = ref(false)
 const chartLoading = ref(false)
-const kpiList = reactive([...transactionKpis])
-const statsData = reactive({ trend: { ...transactionTrend }, price: { ...priceRangeSeries } })
+const kpiList = reactive([])
+const funnelRates = reactive({ orderRate: 0, payRate: 0, dealRate: 0 })
+const newUser = reactive({ payAmount: '0', payAmountTrend: 0, payUsers: 0, payUsersTrend: 0 })
+const oldUser = reactive({ payAmount: '0', payAmountTrend: 0, payUsers: 0, payUsersTrend: 0 })
+const sourceDetail = ref([])
+
+const statsData = reactive({
+  trend: { dates: [], paymentAmount: [], refundAmount: [], payUsers: [], payOrders: [], orderRate: [], payRate: [], dealRate: [] },
+  price: { dates: [], ranges: [], data: [] },
+  funnel: [],
+  userPie: [],
+  sourcePie: [],
+  device: { dates: [], channels: [], series: [] },
+})
+
+const query = reactive({ range: 'week', startDate: '', endDate: '' })
 
 const trendRef = ref(null)
 const funnelRef = ref(null)
@@ -120,24 +140,49 @@ const deviceAreaRef = ref(null)
 
 const { initChart, setOption, resizeAll, disposeAll } = useChartGroup()
 
-const sourceDetail = [
-  { name: 'iOS', amount: '2654.56', count: 35, trend: -16 },
-  { name: '安卓', amount: '6523.00', count: 654, trend: -16 },
-  { name: '鸿蒙', amount: '1200.00', count: 88, trend: 12 },
-]
+const formatDate = (d) => {
+  if (!d) return ''
+  const dt = d instanceof Date ? d : new Date(d)
+  const y = dt.getFullYear()
+  const m = String(dt.getMonth() + 1).padStart(2, '0')
+  const day = String(dt.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
-const onTimeChange = () => fetchTransactionData()
+const onTimeChange = (range) => {
+  query.range = range || 'week'
+  query.startDate = ''
+  query.endDate = ''
+  fetchTransactionData()
+}
 
-/**
- * POST /api/stats/transaction/overview
- * 接口回调中通过 chart.setOption 动态刷新所有图表
- */
+const onCustomChange = (range) => {
+  if (!range || range.length !== 2) return
+  query.startDate = formatDate(range[0])
+  query.endDate = formatDate(range[1])
+  fetchTransactionData()
+}
+
 const fetchTransactionData = async () => {
   loading.value = true
   chartLoading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 500))
-    Object.assign(statsData.trend, transactionTrend)
+    const data = await fetchTransactionOverview({
+      range: query.startDate ? undefined : query.range,
+      startDate: query.startDate || undefined,
+      endDate: query.endDate || undefined,
+    })
+    kpiList.splice(0, kpiList.length, ...(data.kpis || []))
+    Object.assign(statsData.trend, data.trend || {})
+    Object.assign(statsData.price, data.priceRange || {})
+    statsData.funnel = data.funnel || []
+    statsData.userPie = data.userPie || []
+    statsData.sourcePie = data.sourcePie || []
+    Object.assign(statsData.device, data.deviceSeries || {})
+    Object.assign(funnelRates, data.funnelRates || {})
+    Object.assign(newUser, data.newUser || {})
+    Object.assign(oldUser, data.oldUser || {})
+    sourceDetail.value = data.sourceDetail || []
     await nextTick()
     initTransactionCharts()
   } finally {
@@ -176,11 +221,7 @@ const buildFunnelOption = () => ({
     left: '10%',
     width: '80%',
     label: { formatter: '{b}' },
-    data: [
-      { value: 100, name: '浏览' },
-      { value: 60, name: '下单' },
-      { value: 45, name: '付款' },
-    ],
+    data: statsData.funnel.map((f) => ({ name: f.name, value: f.value })),
     itemStyle: { borderColor: '#fff', borderWidth: 2 },
     color: ['#409eff', '#17a2b8', '#67c23a'],
   }],
@@ -194,12 +235,12 @@ const buildPriceBarOption = () => {
     grid: { left: '3%', right: '4%', bottom: 48, top: 24, containLabel: true },
     xAxis: { type: 'category', data: p.dates },
     yAxis: { type: 'value' },
-    series: p.ranges.map((name, i) => ({
+    series: (p.ranges || []).map((name, i) => ({
       name,
       type: 'bar',
       stack: 'total',
       emphasis: { focus: 'series' },
-      data: p.data[i],
+      data: (p.data || [])[i] || [],
     })),
   }
 }
@@ -211,7 +252,7 @@ const buildUserPieOption = () => ({
     type: 'pie',
     radius: ['45%', '70%'],
     center: ['50%', '45%'],
-    data: [{ name: '新用户', value: 35 }, { name: '老用户', value: 654 }],
+    data: statsData.userPie.map((u) => ({ name: u.name, value: u.value })),
     label: { show: false },
   }],
 })
@@ -222,27 +263,28 @@ const buildSourcePieOption = () => ({
     type: 'pie',
     radius: ['45%', '70%'],
     center: ['50%', '50%'],
-    data: [
-      { name: 'iOS', value: 35 },
-      { name: '安卓', value: 654 },
-      { name: '鸿蒙', value: 88 },
-    ],
+    data: statsData.sourcePie.map((s) => ({ name: s.name, value: s.value })),
   }],
 })
 
-const buildDeviceAreaOption = () => ({
-  tooltip: { trigger: 'axis' },
-  legend: { data: ['APP', '微信小程序', 'H5', 'PC站'], bottom: 0 },
-  grid: { left: '3%', right: '4%', bottom: 40, top: 24, containLabel: true },
-  xAxis: { type: 'category', boundaryGap: false, data: dateLabels },
-  yAxis: { type: 'value' },
-  series: [
-    { name: 'APP', type: 'line', stack: 'Total', smooth: true, areaStyle: {}, data: [120, 132, 101, 134, 90, 230, 210] },
-    { name: '微信小程序', type: 'line', stack: 'Total', smooth: true, areaStyle: {}, data: [80, 92, 91, 94, 120, 130, 110] },
-    { name: 'H5', type: 'line', stack: 'Total', smooth: true, areaStyle: {}, data: [60, 72, 71, 74, 90, 100, 80] },
-    { name: 'PC站', type: 'line', stack: 'Total', smooth: true, areaStyle: {}, data: [40, 52, 51, 54, 60, 70, 50] },
-  ],
-})
+const buildDeviceAreaOption = () => {
+  const d = statsData.device
+  return {
+    tooltip: { trigger: 'axis' },
+    legend: { data: d.channels, bottom: 0 },
+    grid: { left: '3%', right: '4%', bottom: 40, top: 24, containLabel: true },
+    xAxis: { type: 'category', boundaryGap: false, data: d.dates },
+    yAxis: { type: 'value' },
+    series: (d.channels || []).map((name, i) => ({
+      name,
+      type: 'line',
+      stack: 'Total',
+      smooth: true,
+      areaStyle: {},
+      data: (d.series || [])[i] || [],
+    })),
+  }
+}
 
 const initTransactionCharts = () => {
   if (trendRef.value) {
@@ -277,6 +319,10 @@ const handleResize = () => resizeAll()
 onMounted(() => {
   fetchTransactionData()
   window.addEventListener('resize', handleResize)
+})
+
+onActivated(() => {
+  fetchTransactionData()
 })
 
 onBeforeUnmount(() => {

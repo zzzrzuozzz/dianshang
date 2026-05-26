@@ -233,3 +233,31 @@ export function featureComment(productNo: string) {
 export function deleteComment(productNo: string) {
   return del(`/api/product/comment/${productNo}`)
 }
+
+export interface ProductRecycleVO extends ProductVO {
+  deletedAt?: string
+}
+
+/** GET /api/product/recycle/list */
+export function fetchRecycleList(params: {
+  keyword?: string
+  page?: number
+  pageSize?: number
+}) {
+  return get<PageResult<ProductRecycleVO>>('/api/product/recycle/list', { params })
+}
+
+/** POST /api/product/recycle/restore */
+export function restoreRecycleProducts(ids: string[]) {
+  return post('/api/product/recycle/restore', { ids })
+}
+
+/** DELETE /api/product/recycle/{productNo} 彻底删除 */
+export function purgeRecycleProduct(productNo: string) {
+  return del(`/api/product/recycle/${productNo}`)
+}
+
+/** DELETE /api/product/recycle/batch 批量彻底删除 */
+export function batchPurgeRecycleProducts(ids: string[]) {
+  return del('/api/product/recycle/batch', { data: { ids } })
+}

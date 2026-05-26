@@ -4,10 +4,11 @@
       <template #header>
         <span class="section-dot" /> 专题详情
       </template>
-      <div class="preview-gallery">
+      <div v-if="detail.images?.length" class="preview-gallery">
         <el-image v-for="(img, i) in detail.images" :key="i" :src="img" fit="cover" class="gallery-img" />
       </div>
       <h2 class="preview-title">{{ detail.title }}</h2>
+      <p v-if="detail.intro" class="preview-intro">{{ detail.intro }}</p>
       <p class="preview-content">{{ detail.content }}</p>
       <div class="preview-stats">
         <span>收藏：{{ detail.collectCount }}</span>
@@ -18,25 +19,25 @@
 
     <el-card shadow="never" class="panel-card">
       <template #header><span class="section-title">关联商品</span></template>
-      <div class="product-row">
+      <div v-if="detail.products?.length" class="product-row">
         <div v-for="p in detail.products" :key="p.id" class="product-card">
           <el-image :src="p.thumb" fit="cover" class="product-thumb" />
           <p class="product-name">{{ p.name }}</p>
           <p class="product-price">¥{{ p.price }}</p>
         </div>
       </div>
+      <el-empty v-else description="未关联商品" />
     </el-card>
 
     <el-card shadow="never" class="panel-card">
       <div class="comment-toolbar">
         <el-tabs v-model="commentTab">
           <el-tab-pane :label="`全部(${comments.length})`" name="all" />
-          <el-tab-pane label="评论" name="comment" />
         </el-tabs>
-        <el-button type="danger" @click="batchDelete">批量删除</el-button>
+        <el-button type="danger" :disabled="!selected.length" @click="batchDelete">批量删除</el-button>
       </div>
 
-      <el-table :data="filteredComments" border stripe @selection-change="(r) => (selected = r)">
+      <el-table :data="comments" border stripe @selection-change="(r) => (selected = r)">
         <el-table-column type="selection" width="48" align="center" />
         <el-table-column prop="id" label="评价编号" width="100" align="center" />
         <el-table-column label="评价内容" min-width="220">
@@ -64,10 +65,6 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination-bar">
-        <span>第1页 共10页 {{ comments.length }}条</span>
-        <el-pagination :total="comments.length" layout="prev, pager, next, sizes" background />
-      </div>
     </el-card>
 
     <el-dialog v-model="replyVisible" title="回复评论" width="480px">
@@ -81,22 +78,35 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { mockTopicDetail, mockTopicComments } from '@/mock/content'
+import {
+  batchDeleteTopicComments,
+  deleteTopicComment,
+  fetchTopicDetail,
+  replyTopicComment,
+  reviewTopicComment,
+} from '@/api/content'
 
 const route = useRoute()
 const loading = ref(false)
 const commentTab = ref('all')
 const comments = ref([])
 const selected = ref([])
-const detail = reactive({ ...mockTopicDetail })
+const detail = reactive({
+  title: '',
+  intro: '',
+  content: '',
+  images: [],
+  collectCount: 0,
+  readCount: 0,
+  shareCount: 0,
+  products: [],
+})
 const replyVisible = ref(false)
 const replyText = ref('')
 const currentRow = ref(null)
-
-const filteredComments = computed(() => comments.value)
 
 const statusTagType = (status) => {
   if (status === 1) return 'success'
@@ -104,18 +114,19 @@ const statusTagType = (status) => {
   return 'warning'
 }
 
-/**
- * GET /api/content/topic/detail/{id}
- * POST /api/content/topic/comment/review — 加精/隐藏等审核操作
- */
 const loadTopicDetailPage = async () => {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 400))
-    const id = route.params.id
-    console.log('[mock] load topic detail', id)
-    Object.assign(detail, mockTopicDetail)
-    comments.value = mockTopicComments.map((c) => ({ ...c }))
+    const data = await fetchTopicDetail(String(route.params.id))
+    detail.title = data.title
+    detail.intro = data.intro || ''
+    detail.content = data.content || ''
+    detail.images = data.images?.length ? data.images : (data.coverImage ? [data.coverImage] : [])
+    detail.collectCount = data.collectCount ?? 0
+    detail.readCount = data.readCount ?? 0
+    detail.shareCount = data.shareCount ?? 0
+    detail.products = data.products || []
+    comments.value = (data.comments || []).map((c) => ({ ...c }))
   } finally {
     loading.value = false
   }
@@ -128,36 +139,33 @@ const openReply = (row) => {
 }
 
 const submitReply = async () => {
-  if (currentRow.value) {
-    currentRow.value.replyContent = replyText.value
-    await new Promise((r) => setTimeout(r, 300))
-    ElMessage.success('回复已保存')
-  }
+  if (!currentRow.value) return
+  await replyTopicComment(currentRow.value.id, replyText.value)
+  currentRow.value.replyContent = replyText.value
+  ElMessage.success('回复已保存')
   replyVisible.value = false
 }
 
 const toggleHide = async (row) => {
-  row.status = row.status === 2 ? 0 : 2
+  const action = row.status === 2 ? 'show' : 'hide'
+  await reviewTopicComment(row.id, action)
+  row.status = action === 'hide' ? 2 : 0
   row.statusText = row.status === 2 ? '已隐藏' : '待审核'
-  await reviewComment(row, 'hide')
+  ElMessage.success('操作成功')
 }
 
 const toggleFeatured = async (row) => {
+  const action = row.status === 1 ? 'show' : 'feature'
+  await reviewTopicComment(row.id, action)
   row.status = row.status === 1 ? 0 : 1
   row.statusText = row.status === 1 ? '已加精' : '待审核'
-  await reviewComment(row, 'feature')
-}
-
-/** POST /api/content/topic/comment/review */
-const reviewComment = async (row, action) => {
-  await new Promise((r) => setTimeout(r, 200))
-  console.log('[mock] comment review', { id: row.id, action })
   ElMessage.success('操作成功')
 }
 
 const deleteComment = (row) => {
   ElMessageBox.confirm('确定删除该评论吗？', '提示', { type: 'warning' })
-    .then(() => {
+    .then(async () => {
+      await deleteTopicComment(row.id)
       comments.value = comments.value.filter((c) => c.id !== row.id)
       ElMessage.success('已删除')
     })
@@ -169,8 +177,15 @@ const batchDelete = () => {
     ElMessage.warning('请先选择评论')
     return
   }
-  ElMessageBox.confirm(`确定删除选中的 ${selected.value.length} 条评论吗？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('批量删除成功'))
+  const ids = selected.value.map((r) => r.id)
+  ElMessageBox.confirm(`确定删除选中的 ${ids.length} 条评论吗？`, '提示', { type: 'warning' })
+    .then(async () => {
+      await batchDeleteTopicComments(ids)
+      comments.value = comments.value.filter((c) => !ids.includes(c.id))
+      selected.value = []
+      ElMessage.success('批量删除成功')
+      loadTopicDetailPage()
+    })
     .catch(() => {})
 }
 
@@ -181,9 +196,10 @@ onMounted(loadTopicDetailPage)
 .topic-detail-page { min-height: calc(100vh - 120px); }
 .panel-card { margin-bottom: 12px; border-radius: 8px; border: none; }
 .section-dot::before { content: ''; display: inline-block; width: 8px; height: 8px; background: #409eff; border-radius: 50%; margin-right: 8px; }
-.preview-gallery { display: flex; gap: 12px; margin-bottom: 16px; }
+.preview-gallery { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .gallery-img { width: 120px; height: 120px; border-radius: 4px; }
 .preview-title { font-size: 18px; margin: 0 0 12px; color: #303133; }
+.preview-intro { color: #909399; margin-bottom: 8px; }
 .preview-content { line-height: 1.8; color: #606266; margin-bottom: 16px; }
 .preview-stats { text-align: right; font-size: 13px; color: #909399; display: flex; gap: 16px; justify-content: flex-end; }
 .product-row { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -195,5 +211,4 @@ onMounted(loadTopicDetailPage)
 .comment-text { margin: 0 0 8px; }
 .comment-pics { display: flex; gap: 6px; }
 .pic-thumb { width: 48px; height: 48px; border-radius: 4px; }
-.pagination-bar { display: flex; justify-content: space-between; margin-top: 16px; font-size: 13px; color: #606266; }
 </style>

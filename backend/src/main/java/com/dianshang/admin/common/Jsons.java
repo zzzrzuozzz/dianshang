@@ -59,4 +59,26 @@ public final class Jsons {
             return Collections.emptyList();
         }
     }
+
+    public static <T> T readValue(String json, Class<T> type) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(json, type);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static <T> T readValue(String json, TypeReference<T> typeRef) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(json, typeRef);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
