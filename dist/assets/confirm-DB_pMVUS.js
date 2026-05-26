@@ -1,1 +1,0 @@
-import{O as r}from"./OrderListPanel-DkTFWHmd.js";import{H as e,g as o}from"./index-CnOCWbJR.js";import"./order-C8bnv4lr.js";const s={__name:"confirm",setup(t){return(a,c)=>(e(),o(r,{"page-type":"confirm"}))}};export{s as default};

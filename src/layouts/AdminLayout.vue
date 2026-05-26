@@ -93,6 +93,17 @@
             <el-menu-item index="/ops/station-message">站内信</el-menu-item>
             <el-menu-item index="/ops/advertisement">广告位</el-menu-item>
           </el-sub-menu>
+
+          <el-sub-menu index="content">
+            <template #title>
+              <el-icon><Document /></el-icon>
+              <span>内容</span>
+            </template>
+            <el-menu-item index="/content/topic">专题</el-menu-item>
+            <el-menu-item index="/content/topic/type">专题类型</el-menu-item>
+            <el-menu-item index="/content/help">帮助</el-menu-item>
+            <el-menu-item index="/content/help/type">帮助分类</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>
@@ -151,6 +162,7 @@ import {
   Refresh,
   Search,
   Bell,
+  Document,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

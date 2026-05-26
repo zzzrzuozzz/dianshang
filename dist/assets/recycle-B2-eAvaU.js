@@ -1,0 +1,1 @@
+import{_ as c,H as o,i as t,l as s,O as n}from"./index-BgOsTdPs.js";const r={},_={class:"recycle-page"};function a(l,p){const e=n("el-empty");return o(),t("div",_,[s(e,{description:"回收站功能开发中"})])}const i=c(r,[["render",a],["__scopeId","data-v-b5b7c56c"]]);export{i as default};
