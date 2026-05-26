@@ -4,6 +4,7 @@ const GROUP_LABELS = {
   product: '商品',
   order: '订单',
   user: '用户',
+  finance: '财务流水',
 }
 
 /**
@@ -14,6 +15,7 @@ export function flattenSearchResult(vo) {
     { key: 'product', items: vo.products || [] },
     { key: 'order', items: vo.orders || [] },
     { key: 'user', items: vo.users || [] },
+    { key: 'finance', items: vo.finance || [] },
   ]
 
   const list = []
@@ -48,5 +50,10 @@ export async function fetchGlobalSearch(keyword) {
   if (!trimmed) return []
 
   const data = await get('/api/ops/global/search', { params: { keyword: trimmed } })
-  return flattenSearchResult(data)
+  return flattenSearchResult({
+    products: data.products,
+    orders: data.orders,
+    users: data.users,
+    finance: data.finance,
+  })
 }

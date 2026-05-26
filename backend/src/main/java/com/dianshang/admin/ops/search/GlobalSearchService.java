@@ -1,5 +1,8 @@
 package com.dianshang.admin.ops.search;
 
+import com.dianshang.admin.finance.entity.FinTransactionRecord;
+import com.dianshang.admin.finance.repository.FinTransactionRecordRepository;
+import com.dianshang.admin.finance.support.FinanceLabels;
 import com.dianshang.admin.member.entity.MemberEntity;
 import com.dianshang.admin.member.repository.MemberRepository;
 import com.dianshang.admin.ops.search.dto.GlobalSearchItemVO;
@@ -34,13 +37,16 @@ public class GlobalSearchService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final MemberRepository memberRepository;
+    private final FinTransactionRecordRepository transactionRepository;
 
     public GlobalSearchService(ProductRepository productRepository,
                                OrderRepository orderRepository,
-                               MemberRepository memberRepository) {
+                               MemberRepository memberRepository,
+                               FinTransactionRecordRepository transactionRepository) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.memberRepository = memberRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     public GlobalSearchResultVO search(String keyword) {
@@ -52,7 +58,32 @@ public class GlobalSearchService {
         vo.setProducts(searchProducts(kw));
         vo.setOrders(searchOrders(kw));
         vo.setUsers(searchUsers(kw));
+        vo.setFinance(searchFinance(kw));
         return vo;
+    }
+
+    private List<GlobalSearchItemVO> searchFinance(String kw) {
+        Specification<FinTransactionRecord> spec = (root, query, cb) -> {
+            String like = "%" + kw.toLowerCase() + "%";
+            return cb.or(
+                    cb.like(cb.lower(root.get("recordNo")), like),
+                    cb.like(cb.lower(root.get("orderNo")), like)
+            );
+        };
+        return transactionRepository.findAll(spec, PageRequest.of(0, LIMIT, Sort.by(Sort.Direction.DESC, "createTime")))
+                .stream()
+                .map(this::toFinanceItem)
+                .toList();
+    }
+
+    private GlobalSearchItemVO toFinanceItem(FinTransactionRecord t) {
+        GlobalSearchItemVO item = new GlobalSearchItemVO();
+        item.setId(t.getRecordNo());
+        String typeLabel = FinanceLabels.TRADE_TYPE.getOrDefault(t.getTradeType(), t.getTradeType());
+        item.setName(typeLabel + " · ¥" + t.getAmount());
+        String orderKey = t.getOrderNo() != null ? t.getOrderNo().replace("_REFUND", "") : "";
+        item.setTargetUrl("/finance/statement?keyword=" + (StringUtils.hasText(orderKey) ? orderKey : t.getRecordNo()));
+        return item;
     }
 
     private List<GlobalSearchItemVO> searchProducts(String kw) {

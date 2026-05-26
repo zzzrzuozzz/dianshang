@@ -114,6 +114,16 @@
             <el-menu-item index="/stats/flow">流量统计</el-menu-item>
             <el-menu-item index="/stats/product">商品统计</el-menu-item>
           </el-sub-menu>
+
+          <el-sub-menu index="finance">
+            <template #title>
+              <el-icon><Wallet /></el-icon>
+              <span>财务</span>
+            </template>
+            <el-menu-item index="/finance/index">资金看板</el-menu-item>
+            <el-menu-item index="/finance/statement">交易流水</el-menu-item>
+            <el-menu-item index="/finance/withdraw">提现审批</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>
@@ -180,6 +190,7 @@ import {
   Bell,
   Document,
   DataAnalysis,
+  Wallet,
   ArrowDown,
 } from '@element-plus/icons-vue'
 import GlobalSearch from '@/components/layout/GlobalSearch.vue'

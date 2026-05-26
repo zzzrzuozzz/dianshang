@@ -608,6 +608,38 @@ CREATE TABLE IF NOT EXISTS cms_help_article (
 
 CREATE INDEX IF NOT EXISTS idx_cms_help_article_type ON cms_help_article (type_id);
 
+CREATE TABLE IF NOT EXISTS fin_transaction_record (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  record_no VARCHAR(32) NOT NULL UNIQUE,
+  order_no VARCHAR(32),
+  user_id BIGINT NOT NULL,
+  trade_type VARCHAR(20) NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  payment_channel VARCHAR(20) DEFAULT 'WECHAT',
+  status INT NOT NULL DEFAULT 1,
+  create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_fin_tx_order_no ON fin_transaction_record (order_no);
+CREATE INDEX IF NOT EXISTS idx_fin_tx_create_time ON fin_transaction_record (create_time);
+CREATE INDEX IF NOT EXISTS idx_fin_tx_user_id ON fin_transaction_record (user_id);
+
+CREATE TABLE IF NOT EXISTS fin_withdraw_apply (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  apply_no VARCHAR(32) NOT NULL UNIQUE,
+  user_id BIGINT NOT NULL,
+  apply_amount DECIMAL(10, 2) NOT NULL,
+  actual_amount DECIMAL(10, 2) NOT NULL,
+  fee_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  bank_card_info CLOB NOT NULL,
+  verify_status INT NOT NULL DEFAULT 0,
+  verify_user VARCHAR(50),
+  verify_time TIMESTAMP,
+  remark VARCHAR(255),
+  create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_fin_wd_user ON fin_withdraw_apply (user_id);
+CREATE INDEX IF NOT EXISTS idx_fin_wd_status ON fin_withdraw_apply (verify_status);
+
 CREATE TABLE IF NOT EXISTS ops_advertisement (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   adv_code VARCHAR(20) NOT NULL UNIQUE,

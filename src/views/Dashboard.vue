@@ -45,6 +45,7 @@
               v-for="task in dashboardData.pendingTasks"
               :key="task.key"
               class="pending-list__item"
+              @click="handlePendingTask(task)"
             >
               <span class="pending-list__label">{{ task.label }}</span>
               <el-badge :value="task.count" :max="9999" type="danger" />
@@ -92,7 +93,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { reactive, ref, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { fetchDashboardOverview } from '@/api/dashboard'
@@ -240,9 +241,26 @@ const handleQuickAccess = (path) => {
   router.push(path)
 }
 
+const PENDING_ROUTES = {
+  pendingShipment: '/order/list',
+  pendingRefund: '/order/after-sale',
+  pendingReceipt: '/order/confirm',
+  pendingAfterSale: '/order/after-sale',
+  pendingWithdraw: '/finance/withdraw',
+}
+
+const handlePendingTask = (task) => {
+  const path = PENDING_ROUTES[task.key]
+  if (path) router.push(path)
+}
+
 onMounted(() => {
   fetchDashboardData()
   window.addEventListener('resize', handleResize)
+})
+
+onActivated(() => {
+  fetchDashboardData()
 })
 
 onBeforeUnmount(() => {
@@ -376,6 +394,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   padding: 12px 8px;
   border-bottom: 1px solid #f2f6fc;
+  cursor: pointer;
 }
 
 .pending-list__label {

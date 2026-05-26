@@ -12,4 +12,5 @@ public class GlobalSearchResultVO {
     private List<GlobalSearchItemVO> products = new ArrayList<>();
     private List<GlobalSearchItemVO> orders = new ArrayList<>();
     private List<GlobalSearchItemVO> users = new ArrayList<>();
+    private List<GlobalSearchItemVO> finance = new ArrayList<>();
 }

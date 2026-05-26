@@ -51,6 +51,10 @@ SELECT 'pendingVerify', '待核销订单', 487, 6
 WHERE NOT EXISTS (SELECT 1 FROM dashboard_pending_task WHERE task_key = 'pendingVerify');
 
 INSERT INTO dashboard_pending_task (task_key, label, count_value, sort_num)
+SELECT 'pendingWithdraw', '待审核提现', 0, 7
+WHERE NOT EXISTS (SELECT 1 FROM dashboard_pending_task WHERE task_key = 'pendingWithdraw');
+
+INSERT INTO dashboard_pending_task (task_key, label, count_value, sort_num)
 SELECT 'pendingReview', '待评价回复', 25, 7
 WHERE NOT EXISTS (SELECT 1 FROM dashboard_pending_task WHERE task_key = 'pendingReview');
 

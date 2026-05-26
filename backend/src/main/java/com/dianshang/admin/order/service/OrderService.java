@@ -7,6 +7,7 @@ import com.dianshang.admin.order.entity.AfterSaleEntity;
 import com.dianshang.admin.order.entity.OrderEntity;
 import com.dianshang.admin.order.repository.AfterSaleRepository;
 import com.dianshang.admin.order.repository.OrderRepository;
+import com.dianshang.admin.finance.service.FinanceOrderBridge;
 import com.dianshang.admin.inventory.service.InventoryService;
 import com.dianshang.admin.order.support.OrderDetailAssembler;
 import com.dianshang.admin.order.support.OrderListMapper;
@@ -31,17 +32,20 @@ public class OrderService {
     private final OrderAddressService orderAddressService;
     private final ExpressTemplateService expressTemplateService;
     private final InventoryService inventoryService;
+    private final FinanceOrderBridge financeOrderBridge;
 
     public OrderService(OrderRepository orderRepository,
                         AfterSaleRepository afterSaleRepository,
                         OrderAddressService orderAddressService,
                         ExpressTemplateService expressTemplateService,
-                        InventoryService inventoryService) {
+                        InventoryService inventoryService,
+                        FinanceOrderBridge financeOrderBridge) {
         this.orderRepository = orderRepository;
         this.afterSaleRepository = afterSaleRepository;
         this.orderAddressService = orderAddressService;
         this.expressTemplateService = expressTemplateService;
         this.inventoryService = inventoryService;
+        this.financeOrderBridge = financeOrderBridge;
     }
 
     public OrderPageVO list(String product, String orderId, String logisticsNo, String phone,
@@ -132,6 +136,7 @@ public class OrderService {
         order.setDeliverySerial("FH" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + orderNo);
         orderRepository.save(order);
         inventoryService.shipOutbound(order);
+        financeOrderBridge.recordIncomeIfPaid(order);
     }
 
     @Transactional
@@ -155,6 +160,7 @@ public class OrderService {
         afterSaleRepository.save(afterSale);
         int qty = order.getQuantity() != null ? order.getQuantity() : 1;
         inventoryService.returnInbound(order, qty);
+        financeOrderBridge.recordRefund(order);
     }
 
     @Transactional
@@ -190,6 +196,7 @@ public class OrderService {
         order.setShipStatus("signed");
         order.setAutoConfirmTime(LocalDateTime.now());
         orderRepository.save(order);
+        financeOrderBridge.recordIncomeIfPaid(order);
     }
 
     @Transactional

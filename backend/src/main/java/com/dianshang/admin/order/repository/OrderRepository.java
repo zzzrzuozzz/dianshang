@@ -14,6 +14,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>, JpaSp
 
     List<OrderEntity> findByDeletedFalseAndCreateTimeBetween(LocalDateTime start, LocalDateTime end);
 
+    long countByDeletedFalseAndCreateTimeBetween(LocalDateTime start, LocalDateTime end);
+
     Optional<OrderEntity> findByOrderNoAndDeletedFalse(String orderNo);
 
     List<OrderEntity> findTop20ByReceiverPhoneAndDeletedFalseOrderByCreateTimeDesc(String receiverPhone);

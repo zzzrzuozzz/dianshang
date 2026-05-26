@@ -1,6 +1,7 @@
 package com.dianshang.admin.dashboard;
 
 import com.dianshang.admin.dashboard.dto.DashboardOverviewVO;
+import com.dianshang.admin.finance.service.DashboardFinanceSync;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -15,14 +16,18 @@ public class DashboardService {
 
     private final DashboardDailyMetricRepository metricRepository;
     private final DashboardPendingTaskRepository pendingTaskRepository;
+    private final DashboardFinanceSync dashboardFinanceSync;
 
     public DashboardService(DashboardDailyMetricRepository metricRepository,
-                              DashboardPendingTaskRepository pendingTaskRepository) {
+                              DashboardPendingTaskRepository pendingTaskRepository,
+                              DashboardFinanceSync dashboardFinanceSync) {
         this.metricRepository = metricRepository;
         this.pendingTaskRepository = pendingTaskRepository;
+        this.dashboardFinanceSync = dashboardFinanceSync;
     }
 
     public DashboardOverviewVO getOverview() {
+        dashboardFinanceSync.refreshPendingTasks();
         List<DashboardDailyMetric> metrics = metricRepository.findAllByOrderByStatDateAsc();
         DashboardDailyMetric today = metrics.isEmpty() ? null : metrics.get(metrics.size() - 1);
         DashboardDailyMetric yesterday = metrics.size() >= 2 ? metrics.get(metrics.size() - 2) : today;
@@ -90,6 +95,7 @@ public class DashboardService {
                 quick("orders", "订单管理", "/order/list", "List", "#f0f9eb", "#67c23a"),
                 quick("users", "用户管理", "/user/list", "User", "#fdf6ec", "#e6a23c"),
                 quick("statistics", "交易统计", "/stats/transaction", "DataAnalysis", "#fef0f0", "#f56c6c"),
+                quick("finance", "资金看板", "/finance/index", "Wallet", "#e8f4ff", "#1a6fb5"),
                 quick("marketing", "广告管理", "/ops/advertisement", "Promotion", "#f4f4f5", "#909399"),
                 quick("settings", "个人中心", "/profile/index", "Setting", "#ecf5ff", "#409eff")
         );

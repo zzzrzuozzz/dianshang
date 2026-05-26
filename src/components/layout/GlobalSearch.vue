@@ -13,7 +13,7 @@
       :trigger-on-focus="false"
       :debounce="0"
       clearable
-      placeholder="输入商品名称/订单号/用户手机号全局搜索..."
+      placeholder="商品/订单/会员/财务流水号全局搜索..."
       popper-class="global-search-popper"
       @select="handleSelect"
       @blur="onBlur"
@@ -52,6 +52,7 @@ let pendingCallback = null
 const tagType = (key) => {
   if (key === 'product') return 'primary'
   if (key === 'order') return 'warning'
+  if (key === 'finance') return 'info'
   return 'success'
 }
 
@@ -102,8 +103,8 @@ const handleSelect = (item) => {
 
   const url = item.targetUrl || '/dashboard'
   if (url.includes('?')) {
-    const [path, query] = url.split('?')
-    const params = Object.fromEntries(new URLSearchParams(query))
+    const [path, queryStr] = url.split('?')
+    const params = Object.fromEntries(new URLSearchParams(queryStr))
     router.push({ path, query: params })
   } else {
     router.push(url)

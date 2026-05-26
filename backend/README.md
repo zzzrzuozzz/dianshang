@@ -107,6 +107,21 @@ mvn spring-boot:run
 
 `ContentDataInitializer` 在表为空时写入演示数据。商品选择复用 `GET /api/promotion/products/picker`。
 
+## 财务管理接口（`/api/finance`）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/finance/overview` | 资金看板（KPI、走势、待审核提现），`granularity=day\|month` |
+| POST | `/api/finance/statement/page` | 交易流水分页（按时间范围走 `idx_create_time`） |
+| POST | `/api/finance/statement/export` | 导出 CSV 对账单（流式写入，限制 5000 条） |
+| POST | `/api/finance/withdraw/page` | 提现申请分页，`tab=all\|pending\|transferring\|done` |
+| PUT | `/api/finance/withdraw/verify` | 审批 `{ applyNo, passed, remark }`，仅待审核可处理（幂等） |
+| POST | `/api/finance/reconcile` | 全库对账：补全订单/提现流水，并同步首页看板待办与近 7 日销售额 |
+
+表：`fin_transaction_record`（流水号唯一防重）、`fin_withdraw_apply`。
+
+**全局联动**：订单发货/确认收货 → `ORDER_IN`；订单退款 → `REFUND_OUT`；提现审核通过 → `WITHDRAW`；首页待办与销售额与财务流水对齐；全局搜索支持财务流水号。
+
 ## 数据统计接口（`/api/stats`）
 
 | 方法 | 路径 | 说明 |

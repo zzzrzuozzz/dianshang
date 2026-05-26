@@ -29,6 +29,6 @@ public class DashboardDailyMetric {
     @Column(name = "sales_amount")
     private BigDecimal salesAmount;
 
-    @Column(name = "yesterday_sales_amount")
-    private BigDecimal yesterdaySalesAmount;
+    @Column(name = "yesterday_sales_amount", nullable = false)
+    private BigDecimal yesterdaySalesAmount = BigDecimal.ZERO;
 }

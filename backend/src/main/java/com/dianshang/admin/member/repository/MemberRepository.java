@@ -16,4 +16,6 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long>, Jpa
     long countByDeletedFalse();
 
     boolean existsByUserNo(String userNo);
+
+    java.util.Optional<MemberEntity> findFirstByPhoneAndDeletedFalse(String phone);
 }
