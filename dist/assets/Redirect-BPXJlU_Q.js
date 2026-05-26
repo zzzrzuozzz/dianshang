@@ -1,0 +1,1 @@
+import{G as o,H as s,i as c,Y as n,Z as u}from"./index-DidyH0Wn.js";const i={__name:"Redirect",setup(p){const r=n(),a=u();return o(()=>{const e=r.params.path,t=Array.isArray(e)?`/${e.join("/")}`:e?`/${e}`:"/dashboard";a.replace(t)}),(e,t)=>(s(),c("div"))}};export{i as default};
